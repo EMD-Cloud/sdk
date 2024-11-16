@@ -43,6 +43,9 @@
       "@semantic-release/github"
     ]
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/EMD-Cloud/sdk#readme",
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^13.0.0",
