@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "target": "es2018",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "strict": true,
+    "esModuleInterop": false,
+    "outDir": "out-tsc",
+    "rootDir": "./",
+    "paths": {
+      "src/*": ["*"]
+    }
+  },
+  "include": ["./src/**/*.ts"]
+}
