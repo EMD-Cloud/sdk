@@ -1,3 +1,3 @@
 const test = 'test_var'
 
-console.log(test, '=> test 2')
+console.log(test, '=> test 3')
