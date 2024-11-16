@@ -1,0 +1,29 @@
+{
+  "name": "@emd-cloud/sdk",
+  "version": "0.0.0",
+  "type": "module",
+  "types": "index.d.ts",
+  "description": "Use EMD Cloud SDK to integrate with your Node.js applications",
+  "main": "src/index.ts",
+  "keywords": [
+    "EMD",
+    "Cloud",
+    "SDK",
+    "Integration"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist && tsc && rollup -c rollup.config.js",
+    "prettier:formating": "npx prettier --write ./src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EMD-Cloud/sdk.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EMD-Cloud/sdk/issues"
+  },
+  "homepage": "https://github.com/EMD-Cloud/sdk#readme"
+}
