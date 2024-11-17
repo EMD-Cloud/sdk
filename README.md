@@ -2,7 +2,7 @@
 
 > Use the capabilities of the EMD Cloud platform in your node.js application.
 
-# How to use
+## How to use
 
 1. Install npm or yarn package:
 
@@ -28,4 +28,10 @@ const emdCloud = new EmdCloud({
 
 Done! The SDK is ready for use.
 
-> todo
+## Documentation
+
+Dillinger uses a number of open source projects to work properly:
+
+- [Databases](#) - Working with a database service (storing, retrieving, recording, deleting data).
+- [Workflows](#) - Working with script services (retrieving information, starting, stopping scripts).
+- [Webhooks](#) - Working with the Webhook Service.
