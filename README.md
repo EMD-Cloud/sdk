@@ -6,7 +6,7 @@
 
 1. Install npm or yarn package:
 
-```
+```sh
 npm install @emd-cloud/sdk
 yarn install @emd-cloud/sdk
 ```
