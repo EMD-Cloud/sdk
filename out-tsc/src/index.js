@@ -1,3 +1,1 @@
-"use strict";
-const test = 'test_var';
-console.log(test, '=> test');
+export * from './core';
