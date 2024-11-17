@@ -30,8 +30,8 @@ Done! The SDK is ready for use.
 
 ## Documentation
 
-Dillinger uses a number of open source projects to work properly:
+We offer you a list of possibilities for using our SDK.
 
-- [Databases](#) - Working with a database service (storing, retrieving, recording, deleting data).
-- [Workflows](#) - Working with script services (retrieving information, starting, stopping scripts).
-- [Webhooks](#) - Working with the Webhook Service.
+- [Database](#) - Working with a Database service.
+- [Workflow](#) - Working with a Workflow service.
+- [Webhook](#) - Working with a Webhook service.
