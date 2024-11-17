@@ -17,7 +17,7 @@ yarn install @emd-cloud/sdk
 
 4. Invoke the EmdCloud class in your application:
 
-```
+```javascript
 import { EmdCloud } from '@emd-cloud/sdk';
 
 const emdCloud = new EmdCloud({
