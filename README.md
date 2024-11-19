@@ -94,7 +94,8 @@ emdCloud.setAuthToken('new-auth-token')
 **Description:**  
 This method authorizes the user by sending a request to the server to obtain information about the current user. An authentication token must be set.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 -   user data, including the token.
@@ -121,7 +122,8 @@ This method authenticates the user using their login and password. It sends a PO
 -   `login`  (string): the user's login.
 -   `password`  (string): the user's password.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 -   `UserData`: user data, including the token.
@@ -151,7 +153,8 @@ This method registers a new user by sending data to the server.
 -   `customFields`  (object, optional): additional custom fields.
 -   `captchaToken`  (string, optional): a token used for captcha verification.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 -   user data, including the token
@@ -178,7 +181,8 @@ This method initiates the password reset process by sending a request to the ser
 
 -   `email`  (string): the email address to send the password reset instructions.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 - information about the password reset process
@@ -199,7 +203,8 @@ This method checks the code sent to the user for resetting the password using th
 -   `requestId`  (string): the request ID for the password reset.
 -   `code`  (string): the code for verification.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 - the results of code verification.
@@ -226,7 +231,8 @@ This method changes the user's password after successfully verifying the reset c
 -   `newPassword`  (string): the new password.
 -   `newPasswordRepeat`  (string): the repeat of the new password.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 - user data with the updated token
@@ -261,7 +267,8 @@ through requestOptions and callOptions.
 - `requestOptions` - An object specifying the fetch request options such as method, headers, body, etc.
 - `callOptions` - An object specifying additional options for the API call, including the authentication type, ignore format response option.
 
-**Returns:**  
+**Returns:** 
+ 
 Returns a  `Promise`  that resolves to one of the following:
 
 -   webhook data, including the token.
