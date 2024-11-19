@@ -31,13 +31,12 @@ class Auth {
   async authorization(): Promise<UserData | ServerError | ValidationError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const token = this.applicationOptions.getAuthToken()
-
-    if (!token) throw new ValidationError('Unable auth token')
+    const authenticationHeader =
+      this.applicationOptions.getAuthorizationHeader()
 
     const res = await apiRequest(`${apiUrl}/api/${app}/auth/me`, {
       method: 'POST',
-      headers: { Authorization: token },
+      headers: { ...authenticationHeader },
       body: null,
     })
 
@@ -95,7 +94,7 @@ class Auth {
    * or a server error if the registration fails.
    * @async
    * @example
-   * await registration({
+   * await emdCloud.auth.registration({
    *   firstName: 'Jane',
    *   lastName: 'Doe',
    *   login: 'janedoe',
@@ -185,7 +184,7 @@ class Auth {
    * @example
    * async function verifyCode() {
    *   try {
-   *     const response = await forgotPasswordCheckCode({ requestId: '12345', code: '54321' });
+   *     const response = await emdCloud.auth.forgotPasswordCheckCode({ requestId: '12345', code: '54321' });
    *     console.log('Verification successful:', response);
    *   } catch (error) {
    *     console.error('Verification failed:', error);

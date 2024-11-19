@@ -1,16 +1,19 @@
-import AppOptions, { AppEnvironment, AppOptionsType } from './AppOptions'
+import AppOptions from './AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
+import { AppEnvironment, AppOptionsType } from 'src/types/common'
 import { Auth } from 'src/user'
+import { Webhook } from 'src/webhook'
 
 class EmdCloud {
   public auth: Auth
+  public webhook: Webhook
   public setAuthToken: AppOptions['setAuthToken']
 
   /**
    * Constructs an instance of the API SDK with the specified options.
    *
    * @param {AppOptionsType} opts - Configuration options for the cloud service. Must include:
-   * - `environment`: The environment where the application is running. 
+   * - `environment`: The environment where the application is running.
    *   Should be one of `AppEnvironment.Client` or `AppEnvironment.Server`.
    * - `appId`: The unique identifier for the application.
    * - `apiUrl?`: Optional API URL. Defaults to `https://api.emd.one`.
@@ -23,7 +26,7 @@ class EmdCloud {
    * const apiEmdCloud = new EmdCloud({
    *   environment: AppEnvironment.Server,
    *   appId: 'myAppId',
-   *   token: 'myAuthToken'
+   *   apiToken: 'myAuthToken'
    * });
    */
   constructor(opts: AppOptionsType) {
@@ -37,11 +40,12 @@ class EmdCloud {
       throw new ValidationError('The "app" option is required.')
     }
 
-    if (opts.environment === AppEnvironment.Server && !opts.token) {
-      throw new ValidationError('The "token" option is required.')
+    if (opts.environment === AppEnvironment.Server && !opts.apiToken) {
+      throw new ValidationError('The "apiToken" option is required.')
     }
 
     this.auth = new Auth(applicationOptions)
+    this.webhook = new Webhook(applicationOptions)
     this.setAuthToken = applicationOptions.setAuthToken
   }
 }
