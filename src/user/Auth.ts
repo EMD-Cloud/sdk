@@ -3,11 +3,7 @@ import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
 import { UserData, ForgotPassData, ForgotPassCheckCodeData } from 'src/types/user'
 import { apiRequest } from 'src/utils/fetch'
-import {
-  userResponseFormatter,
-  forgotPassResponseFormatter,
-  forgotPassCheckCodeResponseFormatter
-} from 'src/utils/formatters'
+import { responseFormatter } from 'src/utils/formatters'
 
 class Auth {
   private applicationOptions: AppOptions
@@ -32,7 +28,7 @@ class Auth {
       }
     )
 
-    const data = userResponseFormatter(res)
+    const data = responseFormatter(res) as UserData
 
     this.applicationOptions.setAuthToken(data.token)
 
@@ -57,7 +53,7 @@ class Auth {
       }
     )
 
-    const data = userResponseFormatter(res)
+    const data = responseFormatter(res) as UserData
 
     this.applicationOptions.setAuthToken(data.token)
 
@@ -97,7 +93,7 @@ class Auth {
       }
     )
 
-    const data = userResponseFormatter(res)
+    const data = responseFormatter(res) as UserData
 
     this.applicationOptions.setAuthToken(data.token)
 
@@ -116,7 +112,7 @@ class Auth {
       }
     )
 
-    const data = forgotPassResponseFormatter(res)
+    const data = responseFormatter(res) as ForgotPassData
 
     return data
   }
@@ -139,7 +135,7 @@ class Auth {
       }
     )
 
-    const data = forgotPassCheckCodeResponseFormatter(res)
+    const data = responseFormatter(res) as ForgotPassCheckCodeData
 
     return data
   }
@@ -169,7 +165,7 @@ class Auth {
       }
     )
 
-    const data = userResponseFormatter(res)
+    const data = responseFormatter(res) as UserData
 
     return data
   }
