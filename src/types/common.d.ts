@@ -19,4 +19,5 @@ export enum AuthType {
 
 export type CallOptions = {
   authType: AuthType
+  ignoreFormatResponse?: boolean
 }

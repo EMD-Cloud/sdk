@@ -22,7 +22,7 @@ class Webhook {
    *
    * @param {string} id - The unique identifier for the webhook.
    * @param {RequestInit} requestOptions - The options for the fetch request, such as method, headers, body, etc.
-   * @param {CallOptions} callOptions - Additional options for the API call, including authentication type.
+   * @param {CallOptions} callOptions - Additional options for the API call, including authentication type, ignore format response option.
    * @returns {Promise<WebhookData | ServerError>} A promise that resolves to the webhook data on success,
    *                                              or a server error object on failure.
    * @throws {Error} Throws an error if the API request fails.
@@ -48,7 +48,7 @@ class Webhook {
 
     let data = res as WebhookData
 
-    if (res.hasOwnProperty('success') && res.hasOwnProperty('data')) {
+    if (!callOptions.ignoreFormatResponse) {
       data = responseFormatter(res) as WebhookData
     }
 

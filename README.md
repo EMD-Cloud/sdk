@@ -259,7 +259,7 @@ through requestOptions and callOptions.
 
 - `id` - A string that uniquely identifies the webhook.
 - `requestOptions` - An object specifying the fetch request options such as method, headers, body, etc.
-- `callOptions` - An object specifying additional options for the API call, including the authentication type.
+- `callOptions` - An object specifying additional options for the API call, including the authentication type, ignore format response option.
 
 **Returns:**  
 Returns a  `Promise`  that resolves to one of the following:
