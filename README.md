@@ -35,15 +35,6 @@ The EMD Cloud SDK enables applications to interact with the [EMD Cloud](https://
 	```sh
 	yarn add @emd-cloud/sdk
 	```
-4. Invoke the EmdCloud class in your application:
-	```javascript
-	import { EmdCloud } from  '@emd-cloud/sdk';
-
-	const emdCloud =  new  EmdCloud({
-		appId: '<your-app-id>',
-		token: '<your-token>'
-	});
-	```
 
 Done! The SDK is ready for use.
 
