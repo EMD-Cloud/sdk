@@ -246,7 +246,7 @@ await emdCloud.auth.forgotPasswordChange({
 
 ----------
 
-### Webhooks methods:
+### Webhook methods:
 
 #### Method:  `webhook.call`
 
