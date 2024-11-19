@@ -15,6 +15,8 @@
         -   [Method: auth.forgotPassword](#method-authforgotpassword)
         -   [Method: auth.forgotPasswordCheckCode](#method-authforgotpasswordcheckcode)
         -   [Method: auth.forgotPasswordChange](#method-authforgotpasswordchange)
+    -   [Webhook methods](#webhook-methods)
+        -   [Method: webhook.call](#method-webhook--call)
 -   [Conclusion](#conclusion)
 
 ## Overview
@@ -240,6 +242,34 @@ await emdCloud.auth.forgotPasswordChange({
     newPassword: 'your-password',
     newPasswordRepeat: 'your-password'
 }) // On success, will return _id for the password update request
+```
+
+----------
+
+### Webhooks methods:
+
+#### Method:  `webhook.call`
+
+**Description:**  
+This function constructs the URL for the API call, adds necessary headers including authorization,
+and handles the response by formatting it if needed. It supports customization of the request
+through requestOptions and callOptions.
+
+**Parameters:**
+
+- `id` - A string that uniquely identifies the webhook.
+- `requestOptions` - An object specifying the fetch request options such as method, headers, body, etc.
+- `callOptions` - An object specifying additional options for the API call, including the authentication type.
+
+**Returns:**  
+Returns a  `Promise`  that resolves to one of the following:
+
+-   webhook data, including the token.
+-   server error.
+
+**Example:**
+```javascript
+await emdCloud.webhook.call('my_webhook', { method: 'POST', body: { title: 'test' } }, { authType: 'api-token' }); // On success, will return webhook data
 ```
 
 ## Conclusion
