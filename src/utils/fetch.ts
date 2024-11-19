@@ -1,5 +1,5 @@
 import { ServerError } from 'src/errors/ServerError'
-import { Response, FetchErrorResponse } from 'src/types/fetch'
+import { Response, ResponseError } from 'src/types/fetch'
 
 export async function apiRequest(
   url: RequestInfo | URL,
@@ -10,8 +10,10 @@ export async function apiRequest(
 
     const data = await response.json()
 
+    if (!response.ok) throw data as ResponseError
+
     return data
   } catch (err) {
-    throw new ServerError((err as FetchErrorResponse).response.error)
+    throw new ServerError((err as ResponseError).error)
   }
 }

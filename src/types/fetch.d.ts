@@ -15,10 +15,4 @@ export interface ResponseList {
   count: number
 }
 
-export type Response = ResponseError | ResponseData | ResponseList
-
-export interface FetchErrorResponse extends Error {
-  response: {
-    error: string
-  }
-}
+export type Response = ResponseData | ResponseList

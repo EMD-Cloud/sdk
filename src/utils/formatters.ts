@@ -1,10 +1,8 @@
-import { ServerError } from 'src/errors/ServerError'
-import { ResponseError, ResponseData } from 'src/types/fetch'
+import { ValidationError } from 'src/errors/ValidationError'
+import { ResponseData } from 'src/types/fetch'
 
-export function responseFormatter(
-  res: ResponseData | ResponseError
-): ResponseData['data'] {
-  if (!res.success) throw new ServerError(res.error)
+export function responseFormatter(res: ResponseData): ResponseData['data'] {
+  if (!res.data) throw new ValidationError('Property "data" is not exist')
 
   return res.data
 }
