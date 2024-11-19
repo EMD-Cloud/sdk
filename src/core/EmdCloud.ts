@@ -1,26 +1,48 @@
+import AppOptions, { AppEnvironment, AppOptionsType } from './AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
-import { EmdCloudOptions } from 'src/types/common'
+import { Auth } from 'src/user'
 
 class EmdCloud {
-  private options: EmdCloudOptions
+  public auth: Auth
+  public setAuthToken: AppOptions['setAuthToken']
 
   /**
-   * Constructs an instance of the cloud service with the specified options.
+   * Constructs an instance of the API SDK with the specified options.
    *
-   * @param {EmdCloudOptions} options - Configuration options for the cloud service.
-   * @throws {ValidationError} If the required options, such as `appId` or `token`, are not provided.
+   * @param {AppOptionsType} opts - Configuration options for the cloud service. Must include:
+   * - `environment`: The environment where the application is running. 
+   *   Should be one of `AppEnvironment.Client` or `AppEnvironment.Server`.
+   * - `appId`: The unique identifier for the application.
+   * - `apiUrl?`: Optional API URL. Defaults to `https://api.emd.one`.
+   * - `authSchema?`: Optional authentication schema. Defaults to `token`.
+   * - `token?`: Optional authentication token required for server environment.
+   *
+   * @throws {ValidationError} If the 'environment', 'appId', or 'token' (when environment is Server) is not provided.
+   *
+   * @example
+   * const apiEmdCloud = new EmdCloud({
+   *   environment: AppEnvironment.Server,
+   *   appId: 'myAppId',
+   *   token: 'myAuthToken'
+   * });
    */
+  constructor(opts: AppOptionsType) {
+    const applicationOptions = new AppOptions(opts)
 
-  constructor(options: EmdCloudOptions) {
-    if (!options.appId) {
-      throw new ValidationError('The "appId" option is required.')
+    if (!opts.environment) {
+      throw new ValidationError('The "environment" option is required.')
     }
 
-    if (!options.token) {
+    if (!opts.appId) {
+      throw new ValidationError('The "app" option is required.')
+    }
+
+    if (opts.environment === AppEnvironment.Server && !opts.token) {
       throw new ValidationError('The "token" option is required.')
     }
 
-    this.options = options
+    this.auth = new Auth(applicationOptions)
+    this.setAuthToken = applicationOptions.setAuthToken
   }
 }
 
