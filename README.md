@@ -269,7 +269,16 @@ Returns a  `Promise`  that resolves to one of the following:
 
 **Example:**
 ```javascript
-await emdCloud.webhook.call('my_webhook', { method: 'POST', body: { title: 'test' } }, { authType: 'api-token' }); // On success, will return webhook data
+await emdCloud.webhook.call(
+	'my_webhook',
+	{
+		method: 'POST',
+		body: { title: 'test' }
+	},
+	{
+		authType: 'api-token'
+	}
+); // On success, will return webhook data
 ```
 
 ## Conclusion
