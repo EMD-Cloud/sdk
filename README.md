@@ -54,7 +54,7 @@ To create an instance of the  `EmdCloud`  class, you need to provide a configura
 const emdCloud = new EmdCloud({
     environment: 'server', // or 'client' for client-side usage
     appId: 'your-app-id',
-    token: 'your-auth-token' // Required if server mode is selected
+    apiToken: 'your-auth-token' // Required if server mode is selected
 })
 ```
 
