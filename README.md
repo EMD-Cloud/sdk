@@ -1,6 +1,6 @@
 # EMD Cloud / SDK
 
-> Use the capabilities of the EMD Cloud platform in your node.js application.
+> Use the capabilities of the EMD Cloud platform in your javascript application.
 
 ## How to use
 
