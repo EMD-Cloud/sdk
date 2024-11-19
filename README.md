@@ -26,6 +26,7 @@ The EMD Cloud SDK enables applications to interact with the [EMD Cloud](https://
 1. Register on the EMD Cloud platform and create an application via the link - https://console.cloud.emd.one
 2. Get the API token of your application.
 3. Install npm or yarn package:
+
 	**NPM**
 	```sh
 	npm install @emd-cloud/sdk
