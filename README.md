@@ -1,4 +1,4 @@
-# SDK EMD Cloud Documentation
+# EMD Cloud / SDK
 
 -   [Overview](#overview)
 -   [Get started](#get-started)
