@@ -1,22 +1,23 @@
+
 # EMD Cloud / SDK
 
 -   [Overview](#overview)
 -   [Get started](#get-started)
 -   [Usage](#usage)
-    -   [Creating an instance](#creating-an-instance)
-    -   [Parameters](#parameters)
+	-   [Creating an instance](#creating-an-instance)
+	-   [Parameters](#parameters)
 -   [Methods](#methods)
-    -   [Basic methods](#basic-methods)
-        -   [Method: setAuthToken](#method-setauthtoken)
-    -   [Auth methods](#auth-methods)
-        -   [Method: auth.authorization](#method-auth.authorization)
-        -   [Method: auth.login](#method-auth.login)
-        -   [Method: auth.registration](#method-auth.registration)
-        -   [Method: auth.forgotPassword](#method-auth.forgotpassword)
-        -   [Method: auth.forgotPasswordCheckCode](#method-auth.forgotpasswordcheckcode)
-        -   [Method: auth.forgotPasswordChange](#method-auth.forgotpasswordchange)
-    -   [Webhook methods](#webhook-methods)
-        -   [Method: webhook.call](#method-webhook.call)
+	-   [Basic methods](#basic-methods)
+		-   [Method: setAuthToken](#method--setauthtoken)
+	-   [Auth methods](#auth-methods)
+		-   [Method: auth.authorization](#method--auth.authorization)
+		-   [Method: auth.login](#method--auth.login)
+		-   [Method: auth.registration](#method--auth.registration)
+		-   [Method: auth.forgotPassword](#method--auth.forgotpassword)
+		-   [Method: auth.forgotPasswordCheckCode](#method--auth.forgotpasswordcheckcode)
+		-   [Method: auth.forgotPasswordChange](#method--auth.forgotpasswordchange)
+	-   [Webhook methods](#webhook-methods)
+		-   [Method: webhook.call](#method--webhook.call)
 -   [Conclusion](#conclusion)
 
 ## Overview
@@ -54,9 +55,9 @@ To create an instance of the  `EmdCloud`  class, you need to provide a configura
 
 ```javascript
 const emdCloud = new EmdCloud({
-    environment: 'server', // or 'client' for client-side usage
-    appId: 'your-app-id',
-    apiToken: 'your-auth-token' // Required if server mode is selected
+	environment: 'server', // or 'client' for client-side usage
+	appId: 'your-app-id',
+	apiToken: 'your-auth-token' // Required if server mode is selected
 })
 ```
 
@@ -133,8 +134,8 @@ Returns a  `Promise`  that resolves to one of the following:
 **Example:**
 ```javascript
 await emdCloud.auth.login({
-    login: 'example@mail.com',
-    password: 'myP@55word'
+	login: 'example@mail.com',
+	password: 'myP@55word'
 }) // On success, will return user data
 ```
 
@@ -164,10 +165,10 @@ Returns a  `Promise`  that resolves to one of the following:
 **Example:**
 ```javascript
 await emdCloud.auth.registration({
-    firstName: 'John',
-    lastName: 'Jonathan',
-    login: 'example@mail.com',
-    password: 'you-password'
+	firstName: 'John',
+	lastName: 'Jonathan',
+	login: 'example@mail.com',
+	password: 'you-password'
 }) // On success, will return user data
 ```
 
@@ -214,8 +215,8 @@ Returns a  `Promise`  that resolves to one of the following:
 **Example:**
 ```javascript
 await emdCloud.auth.forgotPasswordCheckCode({
-    requestId: 'your-request-id',
-    code: 'your-code'
+	requestId: 'your-request-id',
+	code: 'your-code'
 }) // On success, will return _id for the password update request
 ```
 
@@ -245,9 +246,9 @@ If the new password does not match the repeat, a  `ValidationError`  will be thr
 **Example:**
 ```javascript
 await emdCloud.auth.forgotPasswordChange({
-    requestId: 'your-request-id',
-    newPassword: 'your-password',
-    newPasswordRepeat: 'your-password'
+	requestId: 'your-request-id',
+	newPassword: 'your-password',
+	newPasswordRepeat: 'your-password'
 }) // On success, will return _id for the password update request
 ```
 
@@ -279,14 +280,14 @@ Returns a  `Promise`  that resolves to one of the following:
 **Example:**
 ```javascript
 await emdCloud.webhook.call(
-    'my_webhook',
-    {
-        method: 'POST',
-        body: { title: 'test' }
-    },
-    {
-        authType: 'api-token'
-    }
+	'my_webhook',
+	{
+		method: 'POST',
+		body: { title: 'test' }
+	},
+	{
+		authType: 'api-token'
+	}
 ); // On success, will return webhook data
 ```
 
