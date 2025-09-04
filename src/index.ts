@@ -1,2 +1,2 @@
 export * from './core'
-export { SocialProvider } from './types'
+export * from './types'
