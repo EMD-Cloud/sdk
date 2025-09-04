@@ -1,10 +1,10 @@
 import AppOptions from 'src/core/AppOptions'
 import { ServerError } from 'src/errors/ServerError'
-import { UserData } from 'src/types/user'
+import type { UserData } from 'src/types/user'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
-import { CallOptions } from 'src/types/common'
-import { WebhookData } from 'src/types/webhook'
+import type { CallOptions } from 'src/types/common'
+import type { WebhookData } from 'src/types/webhook'
 
 class Webhook {
   private applicationOptions: AppOptions

@@ -59,6 +59,8 @@
   },
   "homepage": "https://github.com/EMD-Cloud/sdk#readme",
   "devDependencies": {
+    "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-node-resolve": "^16.0.1",
     "@semantic-release/commit-analyzer": "^13.0.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.1",
