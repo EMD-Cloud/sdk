@@ -3,7 +3,7 @@ import { Response, ResponseError } from 'src/types/fetch'
 
 export async function apiRequest(
   url: RequestInfo | URL,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<Response> {
   try {
     const response = await fetch(url, options)

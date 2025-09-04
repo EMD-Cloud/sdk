@@ -2,9 +2,11 @@ import AppOptions from 'src/core/AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
 import {
-  UserData,
-  ForgotPassData,
   ForgotPassCheckCodeData,
+  ForgotPassData,
+  UserData,
+  SocialProvider,
+  OAuthUrlResponse,
 } from 'src/types/user'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
@@ -254,6 +256,132 @@ class Auth {
     )
 
     const data = responseFormatter(res) as UserData
+
+    return data
+  }
+
+  /**
+   * Initiates social login flow for OAuth authentication with VK or Yandex.
+   *
+   * This method generates an OAuth authorization URL that the client should redirect
+   * the user to for authentication with the selected social provider.
+   *
+   * @param {Object} params - The social login parameters.
+   * @param {SocialProvider} params.provider - The social provider to use ('vk' or 'yandex').
+   * @param {string} params.redirectUrl - The URL to redirect back to after OAuth authorization.
+   * @returns {Promise<OAuthUrlResponse|ServerError>} A promise that resolves with the OAuth authorization URL
+   *                                                  or a server error if the request fails.
+   * @throws {ValidationError} Throws an error if the provider is not supported.
+   * @throws {ServerError} Throws an error if the OAuth provider is not configured or request fails.
+   * @async
+   *
+   * @example
+   * // Initiate VK OAuth login
+   * const response = await emdCloud.auth.socialLogin({
+   *   provider: SocialProvider.VK,
+   *   redirectUrl: 'https://myapp.com/auth/callback'
+   * });
+   * // Redirect user to response.url
+   * window.location.href = response.url;
+   */
+  async socialLogin({
+    provider,
+    redirectUrl,
+  }: {
+    provider: SocialProvider
+    redirectUrl: string
+  }): Promise<OAuthUrlResponse | ServerError> {
+    const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    if (!Object.values(SocialProvider).includes(provider)) {
+      throw new ValidationError(`Unsupported social provider: ${provider}`)
+    }
+
+    try {
+      // Use native fetch to handle redirect response
+      const response = await fetch(
+        `${apiUrl}/api/${app}/oauth/${provider}?redirectUrl=${encodeURIComponent(redirectUrl)}`,
+        {
+          method: 'GET',
+          redirect: 'manual', // Don't follow redirects automatically
+        },
+      )
+
+      // OAuth endpoint returns a redirect to the provider's auth page
+      if (
+        response.status === 302 ||
+        response.status === 301 ||
+        response.status === 303 ||
+        response.status === 307
+      ) {
+        const location = response.headers.get('location')
+        if (location) {
+          return { url: location } as OAuthUrlResponse
+        }
+        throw new ServerError('OAuth redirect URL not found in response')
+      }
+
+      // If not a redirect, it might be an error response
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new ServerError(errorData.error || 'OAuth initialization failed')
+      }
+
+      // Unexpected successful response without redirect
+      throw new ServerError('Unexpected response from OAuth endpoint')
+    } catch (error) {
+      if (error instanceof ServerError || error instanceof ValidationError) {
+        throw error
+      }
+      throw new ServerError(
+        `Failed to initialize OAuth: ${(error as Error).message}`,
+      )
+    }
+  }
+
+  /**
+   * Exchanges an OAuth secret token for an authentication token.
+   *
+   * This method is used after the OAuth callback to exchange the temporary secret
+   * token for a permanent authentication token and user data.
+   *
+   * @param {string} secret - The secret token received from the OAuth callback.
+   * @returns {Promise<UserData|ServerError>} A promise that resolves with the authenticated user data
+   *                                          including the authentication token, or a server error if the exchange fails.
+   * @throws {ValidationError} Throws an error if the secret token is missing.
+   * @async
+   *
+   * @example
+   * // After OAuth callback, exchange the secret for authentication
+   * const urlParams = new URLSearchParams(window.location.search);
+   * const secret = urlParams.get('secret');
+   *
+   * if (secret) {
+   *   const userData = await emdCloud.auth.exchangeOAuthToken(secret);
+   *   console.log('Authenticated user:', userData);
+   * }
+   */
+  async exchangeOAuthToken(secret: string): Promise<UserData | ServerError> {
+    if (!secret) {
+      throw new ValidationError('OAuth secret token is required')
+    }
+
+    const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    const res = await apiRequest(
+      `${apiUrl}/api/${app}/oauth/get-access-token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      },
+    )
+
+    const data = responseFormatter(res) as UserData
+
+    if (data.token) {
+      this.applicationOptions.setAuthToken(data.token)
+    }
 
     return data
   }

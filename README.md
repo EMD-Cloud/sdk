@@ -12,6 +12,8 @@
 	-   [Auth methods](#auth-methods)
 		-   [Method: auth.authorization](#method--auth.authorization)
 		-   [Method: auth.login](#method--auth.login)
+		-   [Method: auth.socialLogin](#method--auth.sociallogin)
+		-   [Method: auth.exchangeOAuthToken](#method--auth.exchangeoauthtoken)
 		-   [Method: auth.registration](#method--auth.registration)
 		-   [Method: auth.forgotPassword](#method--auth.forgotpassword)
 		-   [Method: auth.forgotPasswordCheckCode](#method--auth.forgotpasswordcheckcode)
@@ -137,6 +139,109 @@ await emdCloud.auth.login({
 	login: 'example@mail.com',
 	password: 'myP@55word'
 }) // On success, will return user data
+```
+
+<br>
+
+#### Method:  `auth.socialLogin`
+
+**Description:**  
+This method initiates social login flow for OAuth authentication with VK or Yandex providers. It generates an OAuth authorization URL that the client should redirect the user to for authentication.
+
+**Parameters:**
+
+-   `provider`  (SocialProvider): The social provider to use. Can be `SocialProvider.VK` for VKontakte or `SocialProvider.YANDEX` for Yandex.
+-   `redirectUrl`  (string): The URL to redirect back to after OAuth authorization. This should be your application's callback URL.
+
+**Returns:** 
+
+Returns a  `Promise`  that resolves to one of the following:
+
+-   An object containing the OAuth authorization URL (`{ url: string }`).
+-   Server error if the OAuth provider is not configured or request fails.
+
+**Notes:**  
+- The provider must be imported from the SDK: `import { SocialProvider } from '@emd-cloud/sdk'`
+- After receiving the URL, redirect the user to it for authentication
+- The OAuth provider will redirect back to your `redirectUrl` with a secret token
+
+**Example:**
+```javascript
+import { SocialProvider } from '@emd-cloud/sdk'
+
+// Step 1: Initiate OAuth login
+const response = await emdCloud.auth.socialLogin({
+	provider: SocialProvider.VK, // or SocialProvider.YANDEX
+	redirectUrl: 'https://myapp.com/auth/callback'
+})
+
+// Step 2: Redirect user to OAuth provider
+window.location.href = response.url
+```
+
+<br>
+
+#### Method:  `auth.exchangeOAuthToken`
+
+**Description:**  
+This method exchanges an OAuth secret token (received from the OAuth callback) for an authentication token and user data. This is the final step in the OAuth authentication flow.
+
+**Parameters:**
+
+-   `secret`  (string): The secret token received from the OAuth callback URL parameters.
+
+**Returns:** 
+
+Returns a  `Promise`  that resolves to one of the following:
+
+-   User data including the authentication token.
+-   Server error if the token exchange fails.
+
+**Notes:**  
+- The secret token is provided in the callback URL as a query parameter
+- Upon successful exchange, the authentication token is automatically set in the SDK instance
+- The returned user data contains all user information including profile details
+
+**Complete OAuth Flow Example:**
+```javascript
+import { SocialProvider } from '@emd-cloud/sdk'
+
+// Step 1: Initiate OAuth login (e.g., when user clicks "Login with VK")
+async function startSocialLogin() {
+	const response = await emdCloud.auth.socialLogin({
+		provider: SocialProvider.VK,
+		redirectUrl: 'https://myapp.com/auth/callback'
+	})
+	
+	// Redirect user to VK/Yandex for authentication
+	window.location.href = response.url
+}
+
+// Step 2: Handle OAuth callback (on your callback page)
+async function handleOAuthCallback() {
+	// Extract secret from URL parameters
+	const urlParams = new URLSearchParams(window.location.search)
+	const secret = urlParams.get('secret')
+	
+	if (secret) {
+		try {
+			// Exchange secret for authentication token
+			const userData = await emdCloud.auth.exchangeOAuthToken(secret)
+			console.log('User authenticated:', userData)
+			
+			// User is now logged in, redirect to dashboard
+			window.location.href = '/dashboard'
+		} catch (error) {
+			console.error('OAuth authentication failed:', error)
+		}
+	} else {
+		// Check for error parameter
+		const error = urlParams.get('error')
+		if (error) {
+			console.error('OAuth error:', error)
+		}
+	}
+}
 ```
 
 <br>
