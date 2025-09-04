@@ -1,12 +1,12 @@
 export enum AccountStatus {
   Pending = 'pending',
   Approved = 'approved',
-  Rejected = 'rejected'
+  Rejected = 'rejected',
 }
 
 export enum PingStatus {
   Online = 'online',
-  Offline = 'offline'
+  Offline = 'offline',
 }
 
 export interface UserData {
@@ -38,10 +38,19 @@ export interface ForgotPassData {
 }
 
 export enum RequestStatus {
-  Open = 'open'
+  Open = 'open',
 }
 
 export interface ForgotPassCheckCodeData {
   _id: string
   requestStatus: RequestStatus
+}
+
+export enum SocialProvider {
+  VK = 'vk',
+  YANDEX = 'yandex',
+}
+
+export interface OAuthUrlResponse {
+  url: string
 }

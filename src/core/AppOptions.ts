@@ -3,12 +3,12 @@ import { ValidationError } from 'src/errors/ValidationError'
 import { AppEnvironment, AppOptionsType, AuthType } from 'src/types/common'
 
 class AppOptions {
-  private apiUrl: AppOptionsType['apiUrl']
-  private apiToken: AppOptionsType['apiToken']
-  private appId: AppOptionsType['appId']
-  private authSchema: AppOptionsType['authSchema']
-  private headerApiTokenKey: AppOptionsType['headerApiTokenKey']
-  private environment: AppOptionsType['environment']
+  private readonly apiUrl: AppOptionsType['apiUrl']
+  private readonly apiToken: AppOptionsType['apiToken']
+  private readonly appId: AppOptionsType['appId']
+  private readonly authSchema: AppOptionsType['authSchema']
+  private readonly headerApiTokenKey: AppOptionsType['headerApiTokenKey']
+  private readonly environment: AppOptionsType['environment']
   private authToken?: string
 
   constructor({
