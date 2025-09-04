@@ -11,6 +11,9 @@ import {
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
 
+// HTTP redirect status codes
+const REDIRECT_STATUS_CODES = [301, 302, 303, 307, 308] as const
+
 class Auth {
   private applicationOptions: AppOptions
 
@@ -298,22 +301,18 @@ class Auth {
     }
 
     try {
+      // Construct OAuth URL with proper parameter handling
+      const oauthUrl = new URL(`/api/${app}/oauth/${provider}`, apiUrl)
+      oauthUrl.searchParams.set('redirectUrl', redirectUrl)
+
       // Use native fetch to handle redirect response
-      const response = await fetch(
-        `${apiUrl}/api/${app}/oauth/${provider}?redirectUrl=${encodeURIComponent(redirectUrl)}`,
-        {
-          method: 'GET',
-          redirect: 'manual', // Don't follow redirects automatically
-        },
-      )
+      const response = await fetch(oauthUrl.toString(), {
+        method: 'GET',
+        redirect: 'manual', // Don't follow redirects automatically
+      })
 
       // OAuth endpoint returns a redirect to the provider's auth page
-      if (
-        response.status === 302 ||
-        response.status === 301 ||
-        response.status === 303 ||
-        response.status === 307
-      ) {
+      if (REDIRECT_STATUS_CODES.includes(response.status as any)) {
         const location = response.headers.get('location')
         if (location) {
           return { url: location } as OAuthUrlResponse
