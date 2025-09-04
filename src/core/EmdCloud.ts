@@ -1,6 +1,6 @@
 import AppOptions from './AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
-import { AppEnvironment, AppOptionsType } from 'src/types/common'
+import type { AppOptionsType } from 'src/types/common'
 import { Auth } from 'src/user'
 import { Webhook } from 'src/webhook'
 
@@ -40,7 +40,7 @@ class EmdCloud {
       throw new ValidationError('The "app" option is required.')
     }
 
-    if (opts.environment === AppEnvironment.Server && !opts.apiToken) {
+    if (opts.environment === 'server' && !opts.apiToken) {
       throw new ValidationError('The "apiToken" option is required.')
     }
 

@@ -1,5 +1,5 @@
 import { ServerError } from 'src/errors/ServerError'
-import { Response, ResponseError } from 'src/types/fetch'
+import type { Response, ResponseError } from 'src/types/fetch'
 
 export async function apiRequest(
   url: RequestInfo | URL,

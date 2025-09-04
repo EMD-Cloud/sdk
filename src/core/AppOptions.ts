@@ -1,6 +1,6 @@
 import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ValidationError } from 'src/errors/ValidationError'
-import { AppEnvironment, AppOptionsType, AuthType } from 'src/types/common'
+import type { AppEnvironment, AppOptionsType, AuthType } from 'src/types/common'
 
 class AppOptions {
   private readonly apiUrl: AppOptionsType['apiUrl']
@@ -32,16 +32,16 @@ class AppOptions {
   }
 
   getAuthorizationHeader(
-    authType: AuthType = AuthType.AuthToken,
+    authType: AuthType = 'auth-token' as AuthType,
   ): Record<string, string> {
-    if (authType === AuthType.AuthToken) {
+    if (authType === 'auth-token') {
       if (!this.authToken) throw new ValidationError('Unable auth token')
 
       return { Authorization: `${this.authSchema} ${this.authToken}` }
     }
 
-    if (authType === AuthType.ApiToken) {
-      if (this.environment === AppEnvironment.Client) {
+    if (authType === 'api-token') {
+      if (this.environment === 'client') {
         throw new NotAllowedError(
           `Obtaining an apiToken is prohibited on the client side`,
         )

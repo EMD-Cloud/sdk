@@ -1,7 +1,7 @@
 import AppOptions from 'src/core/AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
-import {
+import type {
   ForgotPassCheckCodeData,
   ForgotPassData,
   UserData,

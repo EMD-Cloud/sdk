@@ -1,15 +1,30 @@
 import dts from 'rollup-plugin-dts';
 import esbuild, { minify } from 'rollup-plugin-esbuild';
+import alias from '@rollup/plugin-alias';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const bundle = (config) => ({
   ...config,
   input: 'src/index.ts',
-  external: (id) => !/^[./]/.test(id),
 });
 
 export default [
   bundle({
-    plugins: [esbuild(), minify()],
+    plugins: [
+      esbuild(),
+      alias({
+        entries: [
+          { find: 'src', replacement: path.resolve(__dirname, 'src') },
+        ],
+      }),
+      nodeResolve({ extensions: ['.ts', '.d.ts', '.js'] }),
+      minify()
+    ],
     output: [
       {
         entryFileNames: '[name].min.js',
@@ -20,7 +35,15 @@ export default [
     ],
   }),
   bundle({
-    plugins: [esbuild()],
+    plugins: [
+      esbuild(),
+      alias({
+        entries: [
+          { find: 'src', replacement: path.resolve(__dirname, 'src') },
+        ],
+      }),
+      nodeResolve({ extensions: ['.ts', '.d.ts', '.js'] })
+    ],
     output: [
       {
         dir: 'dist',
@@ -32,7 +55,9 @@ export default [
     ],
   }),
   bundle({
-    plugins: [dts()],
+    plugins: [
+      dts({ tsconfig: './tsconfig.json' })
+    ],
     output: {
       dir: 'dist',
       format: 'es',
