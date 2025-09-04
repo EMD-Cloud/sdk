@@ -2,9 +2,19 @@
   "name": "@emd-cloud/sdk",
   "version": "1.6.0",
   "type": "module",
-  "types": "index.d.ts",
+  "types": "dist/index.d.ts",
   "description": "Use EMD Cloud SDK to integrate with your Node.js applications",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "EMD",
     "Cloud",
@@ -13,8 +23,9 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist && tsc && rollup -c rollup.config.js",
-    "prettier:formating": "npx prettier --write ./src"
+    "build": "rimraf dist && rollup -c rollup.config.js",
+    "typecheck": "tsc --noEmit",
+    "prettier:formatting": "npx prettier --write ./src"
   },
   "repository": {
     "type": "git",

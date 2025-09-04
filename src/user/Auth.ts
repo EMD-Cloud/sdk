@@ -5,9 +5,9 @@ import {
   ForgotPassCheckCodeData,
   ForgotPassData,
   UserData,
-  SocialProvider,
   OAuthUrlResponse,
 } from 'src/types/user'
+import { SocialProvider } from '../types'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
 
