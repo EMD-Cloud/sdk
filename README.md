@@ -10,16 +10,16 @@
 	-   [Basic methods](#basic-methods)
 		-   [Method: setAuthToken](#method--setauthtoken)
 	-   [Auth methods](#auth-methods)
-		-   [Method: auth.authorization](#method--auth.authorization)
-		-   [Method: auth.login](#method--auth.login)
-		-   [Method: auth.socialLogin](#method--auth.sociallogin)
-		-   [Method: auth.exchangeOAuthToken](#method--auth.exchangeoauthtoken)
-		-   [Method: auth.registration](#method--auth.registration)
-		-   [Method: auth.forgotPassword](#method--auth.forgotpassword)
-		-   [Method: auth.forgotPasswordCheckCode](#method--auth.forgotpasswordcheckcode)
-		-   [Method: auth.forgotPasswordChange](#method--auth.forgotpasswordchange)
+		-   [Method: auth.authorization](#method--authauthorization)
+		-   [Method: auth.login](#method--authlogin)
+		-   [Method: auth.socialLogin](#method--authsociallogin)
+		-   [Method: auth.exchangeOAuthToken](#method--authexchangeoauthtoken)
+		-   [Method: auth.registration](#method--authregistration)
+		-   [Method: auth.forgotPassword](#method--authforgotpassword)
+		-   [Method: auth.forgotPasswordCheckCode](#method--authforgotpasswordcheckcode)
+		-   [Method: auth.forgotPasswordChange](#method--authforgotpasswordchange)
 	-   [Webhook methods](#webhook-methods)
-		-   [Method: webhook.call](#method--webhook.call)
+		-   [Method: webhook.call](#method--webhookcall)
 -   [Conclusion](#conclusion)
 
 ## Overview
@@ -164,6 +164,10 @@ Returns a  `Promise`  that resolves to one of the following:
 - The provider must be imported from the SDK: `import { SocialProvider } from '@emd-cloud/sdk'`
 - After receiving the URL, redirect the user to it for authentication
 - The OAuth provider will redirect back to your `redirectUrl` with a secret token
+
+**Environment-specific behavior:**
+- In `client` environment: Returns the OAuth URL directly. Use `window.location.href = response.url` to navigate.
+- In `server` environment: Attempts to fetch and follow the redirect to get the final OAuth provider URL.
 
 **Example:**
 ```javascript
