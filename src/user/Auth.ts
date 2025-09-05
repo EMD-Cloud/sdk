@@ -300,12 +300,18 @@ class Auth {
       throw new ValidationError(`Unsupported social provider: ${provider}`)
     }
 
-    try {
-      // Construct OAuth URL with proper parameter handling
-      const oauthUrl = new URL(`/api/${app}/oauth/${provider}`, apiUrl)
-      oauthUrl.searchParams.set('redirectUrl', redirectUrl)
+    // Construct OAuth URL with proper parameter handling
+    const oauthUrl = new URL(`/api/${app}/oauth/${provider}`, apiUrl)
+    oauthUrl.searchParams.set('redirectUrl', redirectUrl)
 
-      // Use native fetch to handle redirect response
+    // In client environments, return URL for direct navigation
+    // Browser will handle the redirect chain automatically, avoiding CORS issues
+    if (this.applicationOptions.getEnvironment() === 'client') {
+      return { url: oauthUrl.toString() } as OAuthUrlResponse
+    }
+
+    // Server-side: attempt to get redirect location via fetch
+    try {
       const response = await fetch(oauthUrl.toString(), {
         method: 'GET',
         redirect: 'manual', // Don't follow redirects automatically
@@ -317,13 +323,36 @@ class Auth {
         if (location) {
           return { url: location } as OAuthUrlResponse
         }
-        throw new ServerError('OAuth redirect URL not found in response')
+        throw new ServerError(`OAuth redirect received but no location header found (status: ${response.status})`)
       }
 
       // If not a redirect, it might be an error response
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new ServerError(errorData.error || 'OAuth initialization failed')
+        let errorMessage = `OAuth initialization failed (status: ${response.status})`
+        
+        // Only try to parse body if content-type indicates JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch (jsonError) {
+            // JSON parsing failed, append parse error details
+            errorMessage = `${errorMessage} (could not parse response body)`
+          }
+        } else {
+          // Non-JSON response, try to get text for debugging
+          try {
+            const text = await response.text()
+            if (text) {
+              errorMessage = `${errorMessage}: ${text.substring(0, 200)}`
+            }
+          } catch {
+            errorMessage = `${errorMessage} (empty or unreadable response)`
+          }
+        }
+        
+        throw new ServerError(errorMessage)
       }
 
       // Unexpected successful response without redirect

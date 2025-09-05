@@ -1,6 +1,6 @@
 import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ValidationError } from 'src/errors/ValidationError'
-import type { AppEnvironment, AppOptionsType, AuthType } from 'src/types/common'
+import type { AppOptionsType, AuthType } from 'src/types/common'
 
 class AppOptions {
   private readonly apiUrl: AppOptionsType['apiUrl']
@@ -29,6 +29,10 @@ class AppOptions {
 
   getOptions() {
     return { apiUrl: this.apiUrl, app: this.appId }
+  }
+
+  getEnvironment() {
+    return this.environment
   }
 
   getAuthorizationHeader(
