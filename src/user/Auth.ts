@@ -323,13 +323,15 @@ class Auth {
         if (location) {
           return { url: location } as OAuthUrlResponse
         }
-        throw new ServerError(`OAuth redirect received but no location header found (status: ${response.status})`)
+        throw new ServerError(
+          `OAuth redirect received but no location header found (status: ${response.status})`,
+        )
       }
 
       // If not a redirect, it might be an error response
       if (!response.ok) {
         let errorMessage = `OAuth initialization failed (status: ${response.status})`
-        
+
         // Only try to parse body if content-type indicates JSON
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
@@ -351,7 +353,7 @@ class Auth {
             errorMessage = `${errorMessage} (empty or unreadable response)`
           }
         }
-        
+
         throw new ServerError(errorMessage)
       }
 

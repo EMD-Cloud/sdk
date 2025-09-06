@@ -20,6 +20,17 @@
 		-   [Method: auth.forgotPasswordChange](#method--authforgotpasswordchange)
 	-   [Webhook methods](#webhook-methods)
 		-   [Method: webhook.call](#method--webhookcall)
+	-   [Database methods](#database-methods)
+		-   [Creating a database instance](#creating-a-database-instance)
+		-   [Method: database.getRows](#method--databasegetrows)
+		-   [Method: database.countRows](#method--databasecountrows)
+		-   [Method: database.getRow](#method--databasegetrow)
+		-   [Method: database.createRow](#method--databasecreaterow)
+		-   [Method: database.updateRow](#method--databaseupdaterow)
+		-   [Method: database.bulkUpdate](#method--databasebulkupdate)
+		-   [Method: database.deleteRow](#method--databasedeleterow)
+		-   [Method: database.deleteRows](#method--databasedeleterows)
+		-   [Method: database.triggerButton](#method--databasetriggerbutton)
 -   [Conclusion](#conclusion)
 
 ## Overview
@@ -398,6 +409,280 @@ await emdCloud.webhook.call(
 		authType: 'api-token'
 	}
 ); // On success, will return webhook data
+```
+
+<br>
+<br>
+
+### Database methods:
+
+The database module allows you to interact with collections in your EMD Cloud spaces. Each database instance is bound to a specific space and collection, enabling CRUD operations, batch updates, and trigger actions.
+
+#### Creating a database instance
+
+To work with database collections, you need to create a database instance for each collection:
+
+```javascript
+const usersDb = emdCloud.database('users-collection-id');
+const ordersDb = emdCloud.database('orders-collection-id');
+```
+
+Each instance is scoped to a specific collection within your app's space, so you'll need separate instances for different collections.
+
+#### Key Features
+
+- **Human-Readable Names**: Many methods support the `useHumanReadableNames` parameter, which replaces technical column identifiers (e.g., `col_xxx`) with human-readable key names (e.g., `code`, `name`, `id`) in JSON responses.
+- **Save Modes**: Update operations support synchronous (`SYNC`) and asynchronous (`ASYNC`) save modes for different performance requirements.
+
+#### Method: `database.getRows`
+
+**Description:**  
+Retrieves rows from the database collection with optional filtering, sorting, and pagination support. Supports MongoDB-style queries for complex filtering.
+
+**Parameters:**
+- `options` (object, optional): Query options including:
+  - `query` (object, optional): MongoDB-style query object with `$and`, `$or` operators
+  - `sort` (array, optional): Sort configuration `[{column: 'fieldName', sort: 'asc|desc'}]`
+  - `limit` (number, optional): Maximum number of rows to return (default: 50)
+  - `page` (number, optional): Page number for pagination (default: 0)
+  - `search` (string, optional): Text search across collection
+  - `hasOptimiseResponse` (boolean, optional): Optimize response size (default: false)
+  - `useHumanReadableNames` (boolean, optional): Use readable column names (default: false)
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Array of rows with count information
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.getRows(
+  {
+    query: { "$and": [{ "data.status": { "$eq": "active" } }] },
+    sort: [{ column: "createdAt", sort: "desc" }],
+    limit: 20,
+    page: 0
+  },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.countRows`
+
+**Description:**  
+Gets the total count of rows matching the specified query without returning the actual data.
+
+**Parameters:**
+- `options` (object, optional): Count options including:
+  - `query` (object, optional): MongoDB-style query object
+  - `search` (string, optional): Text search across collection
+  - `createdAt` (string, optional): Filter by creation date
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Count object with total number
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.countRows(
+  { query: { "$and": [{ "data.status": { "$eq": "active" } }] } },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.getRow`
+
+**Description:**  
+Retrieves a single row by its unique identifier.
+
+**Parameters:**
+- `rowId` (string): The unique ID of the row to retrieve
+- `options` (object, optional): Options for retrieving the row including:
+  - `useHumanReadableNames` (boolean, optional): Use readable column names (default: false)
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Single row data object
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.getRow(
+  '60a7c8b8f123456789abcdef', 
+  { useHumanReadableNames: true },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.createRow`
+
+**Description:**  
+Creates a new row in the database collection.
+
+**Parameters:**
+- `rowData` (object): The data for the new row
+- `options` (object, optional): Create options including:
+  - `user` (string, optional): User ID to associate with the row
+  - `notice` (string, optional): Notice/comment for the operation
+  - `useHumanReadableNames` (boolean, optional): Use readable column names in response (default: false)
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Created row data object
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.createRow(
+  { name: 'John Doe', email: 'john@example.com', status: 'active' },
+  { notice: 'Created via API' },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.updateRow`
+
+**Description:**  
+Updates an existing row in the database collection.
+
+**Parameters:**
+- `rowId` (string): The unique ID of the row to update
+- `rowData` (object): The data to update
+- `options` (object, optional): Update options including:
+  - `user` (string, optional): User ID to associate with the update
+  - `notice` (string, optional): Notice/comment for the operation
+  - `saveMode` (string, optional): Save operation mode - 'SYNC' or 'ASYNC' (default: 'SYNC')
+  - `useHumanReadableNames` (boolean, optional): Use readable column names in response (default: false)
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Updated row data object
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.updateRow(
+  '60a7c8b8f123456789abcdef',
+  { status: 'inactive' },
+  { notice: 'Deactivated user' },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.bulkUpdate`
+
+**Description:**  
+Updates multiple rows matching the specified query in a single operation.
+
+**Parameters:**
+- `payload` (object): Bulk update configuration including:
+  - `query` (object): MongoDB-style query to match rows for update
+  - `data` (object): Data to update on matching rows
+  - `notice` (string): Notice/comment for the bulk operation
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Bulk operation result with counts
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.bulkUpdate(
+  {
+    query: { "$and": [{ "data.status": { "$eq": "pending" } }] },
+    data: { status: "active" },
+    notice: "Bulk activation of pending users"
+  },
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.deleteRow`
+
+**Description:**  
+Deletes a single row by its unique identifier.
+
+**Parameters:**
+- `rowId` (string): The unique ID of the row to delete
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Delete operation result
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.deleteRow('60a7c8b8f123456789abcdef', { authType: 'auth-token' });
+```
+
+<br>
+
+#### Method: `database.deleteRows`
+
+**Description:**  
+Deletes multiple rows by their unique identifiers in a single operation.
+
+**Parameters:**
+- `rowIds` (array): Array of row IDs to delete
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Delete operation result with counts
+- Server error
+
+**Example:**
+```javascript
+const result = await usersDb.deleteRows(
+  ['60a7c8b8f123456789abcdef', '60a7c8b8f123456789abcdeg'],
+  { authType: 'auth-token' }
+);
+```
+
+<br>
+
+#### Method: `database.triggerButton`
+
+**Description:**  
+Triggers a button action on a specific row. This is used for executing custom workflows or actions defined in your EMD Cloud collection.
+
+**Parameters:**
+- `rowId` (string): The unique ID of the row containing the button
+- `columnId` (string): The ID of the column containing the button to trigger
+- `callOptions` (object): API call options including `authType`
+
+**Returns:**  
+Returns a `Promise` that resolves to:
+- Trigger action result
+- Server error
+
+**Example:**
+```javascript
+const result = await ordersDb.triggerButton(
+  '60a7c8b8f123456789abcdef',
+  'approve-button-column-id',
+  { authType: 'auth-token' }
+);
 ```
 
 <br>

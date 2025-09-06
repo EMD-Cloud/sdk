@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Build & Development
 - `npm run build` - Clean build with TypeScript compilation and Rollup bundling (outputs to dist/)
-- `npm run prettier:formating` - Format all source code with Prettier
+- `npm run prettier:formatting` - Format all source code with Prettier
 - **Note**: No test command implemented - test script returns error code 1
 
 ### Linting & Type Checking
@@ -18,15 +18,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API, supporting both client-side and server-side environments.
 
 ### Core Structure
-- **EmdCloud class** (`src/core/EmdCloud.ts`): Main SDK entry point with `auth` and `webhook` modules
+- **EmdCloud class** (`src/core/EmdCloud.ts`): Main SDK entry point with `auth`, `webhook`, and `database` modules
 - **AppOptions** (`src/core/AppOptions.ts`): Manages SDK configuration, API URLs, and auth headers
 - **Auth module** (`src/user/Auth.ts`): Handles user authentication, registration, password reset, and social OAuth login (VK/Yandex)
 - **Webhook module** (`src/webhook/Webhook.ts`): Execute webhooks with flexible auth options
+- **Database module** (`src/database/Database.ts`): CRUD operations for database collections with MongoDB-style querying
 
 ### Key Design Patterns
 - **Environment-aware**: SDK differentiates between client/server environments - API tokens only work server-side
 - **Auth types**: Supports both AuthToken (user sessions) and ApiToken (server-side) authentication
 - **OAuth flow**: Social login via VK/Yandex - initiate with `socialLogin()`, handle callback, exchange secret with `exchangeOAuthToken()`
+- **Database collections**: Each Database instance is scoped to a specific collection within the app's space - create multiple instances for different collections
+- **MongoDB-style queries**: Database module supports complex filtering with `$and`, `$or`, and comparison operators
 - **Response handling**: All API responses follow `ResponseData<T>` format with data/error structure
 - **Error classes**: Custom error types in `src/errors/` for validation, server, and permission errors
 
@@ -34,6 +37,9 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
 All types are in `src/types/` with strict TypeScript mode enabled. Key interfaces:
 - `AppOptionsType`: SDK configuration interface
 - `UserData`: Complete user profile structure
+- `DatabaseRowData<T>`: Generic database row structure with flexible data typing
+- `DatabaseQuery`: MongoDB-style query interface with `$and`, `$or` support
+- `DatabaseListOptions`: Comprehensive options for row retrieval (pagination, sorting, filtering)
 - `ResponseData<T>` / `ResponseError`: Standardized API response types
 
 ### Build Configuration
