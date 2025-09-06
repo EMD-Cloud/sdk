@@ -3,11 +3,13 @@ import { ValidationError } from 'src/errors/ValidationError'
 import type { AppOptionsType } from 'src/types/common'
 import { Auth } from 'src/user'
 import { Webhook } from 'src/webhook'
+import { Database } from 'src/database'
 
 class EmdCloud {
   public auth: Auth
   public webhook: Webhook
   public setAuthToken: AppOptions['setAuthToken']
+  private readonly applicationOptions: AppOptions
 
   /**
    * Constructs an instance of the API SDK with the specified options.
@@ -44,9 +46,23 @@ class EmdCloud {
       throw new ValidationError('The "apiToken" option is required.')
     }
 
+    this.applicationOptions = applicationOptions
     this.auth = new Auth(applicationOptions)
     this.webhook = new Webhook(applicationOptions)
     this.setAuthToken = applicationOptions.setAuthToken
+  }
+
+  /**
+   * Creates a database instance for interacting with a specific collection.
+   *
+   * @param {string} collectionId - The unique identifier for the collection
+   * @returns {Database} A database instance configured for the specified collection
+   * @example
+   * const usersDb = emdCloud.database('users-collection-id');
+   * const ordersDb = emdCloud.database('orders-collection-id');
+   */
+  database(collectionId: string): Database {
+    return new Database(this.applicationOptions, collectionId)
   }
 }
 
