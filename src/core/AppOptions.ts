@@ -1,6 +1,6 @@
 import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ValidationError } from 'src/errors/ValidationError'
-import type { AppOptionsType, AuthType } from 'src/types/common'
+import { AppOptionsType, AuthType } from 'src/types/common'
 
 class AppOptions {
   private readonly apiUrl: AppOptionsType['apiUrl']
@@ -40,15 +40,13 @@ class AppOptions {
 
   private determineDefaultAuthType(): AuthType {
     if (this.environment === 'client') {
-      return 'auth-token' as AuthType
+      return AuthType.AuthToken
     }
     // Server: use ApiToken if available, otherwise AuthToken
-    return this.apiToken ? ('api-token' as AuthType) : ('auth-token' as AuthType)
+    return this.apiToken ? AuthType.ApiToken : AuthType.AuthToken
   }
 
-  getAuthorizationHeader(
-    authType?: AuthType,
-  ): Record<string, string> {
+  getAuthorizationHeader(authType?: AuthType): Record<string, string> {
     const effectiveAuthType = authType || this.defaultAuthType
     if (effectiveAuthType === 'auth-token') {
       if (!this.authToken) throw new ValidationError('Unable auth token')
@@ -66,7 +64,9 @@ class AppOptions {
       return { [String(this.headerApiTokenKey)]: String(this.apiToken) }
     }
 
-    throw new ValidationError(`Not support current authType (${effectiveAuthType})`)
+    throw new ValidationError(
+      `Not support current authType (${effectiveAuthType})`,
+    )
   }
 
   setAuthToken(token: string) {
