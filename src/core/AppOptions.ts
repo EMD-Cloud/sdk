@@ -1,6 +1,6 @@
 import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ValidationError } from 'src/errors/ValidationError'
-import type { AppOptionsType, AuthType } from 'src/types/common'
+import { AppEnvironment, AppOptionsType, AuthType } from 'src/types/common'
 
 class AppOptions {
   private readonly apiUrl: AppOptionsType['apiUrl']
@@ -9,6 +9,7 @@ class AppOptions {
   private readonly authSchema: AppOptionsType['authSchema']
   private readonly headerApiTokenKey: AppOptionsType['headerApiTokenKey']
   private readonly environment: AppOptionsType['environment']
+  private readonly defaultAuthType: AppOptionsType['defaultAuthType']
   private authToken?: string
 
   constructor({
@@ -18,6 +19,7 @@ class AppOptions {
     headerApiTokenKey = 'apitoken',
     apiToken = '',
     environment,
+    defaultAuthType,
   }: AppOptionsType) {
     this.apiUrl = apiUrl
     this.appId = appId
@@ -25,6 +27,7 @@ class AppOptions {
     this.authSchema = authSchema
     this.headerApiTokenKey = headerApiTokenKey
     this.environment = environment
+    this.defaultAuthType = defaultAuthType || this.determineDefaultAuthType()
   }
 
   getOptions() {
@@ -35,17 +38,24 @@ class AppOptions {
     return this.environment
   }
 
-  getAuthorizationHeader(
-    authType: AuthType = 'auth-token' as AuthType,
-  ): Record<string, string> {
-    if (authType === 'auth-token') {
+  private determineDefaultAuthType(): AuthType {
+    if (this.environment === AppEnvironment.Client) {
+      return AuthType.AuthToken
+    }
+    // Server: use ApiToken if available, otherwise AuthToken
+    return this.apiToken ? AuthType.ApiToken : AuthType.AuthToken
+  }
+
+  getAuthorizationHeader(authType?: AuthType): Record<string, string> {
+    const effectiveAuthType = authType || this.defaultAuthType
+    if (effectiveAuthType === AuthType.AuthToken) {
       if (!this.authToken) throw new ValidationError('Unable auth token')
 
       return { Authorization: `${this.authSchema} ${this.authToken}` }
     }
 
-    if (authType === 'api-token') {
-      if (this.environment === 'client') {
+    if (effectiveAuthType === AuthType.ApiToken) {
+      if (this.environment === AppEnvironment.Client) {
         throw new NotAllowedError(
           `Obtaining an apiToken is prohibited on the client side`,
         )
@@ -54,7 +64,9 @@ class AppOptions {
       return { [String(this.headerApiTokenKey)]: String(this.apiToken) }
     }
 
-    throw new ValidationError(`Not support current authType (${authType})`)
+    throw new ValidationError(
+      `Not support current authType (${effectiveAuthType})`,
+    )
   }
 
   setAuthToken(token: string) {

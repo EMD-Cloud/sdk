@@ -46,7 +46,7 @@ class Database {
    */
   async getRows<T = Record<string, any>>(
     options: DatabaseListOptions = {},
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseRowsResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -111,7 +111,7 @@ class Database {
    */
   async countRows(
     options: DatabaseCountOptions = {},
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseCountResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -165,7 +165,7 @@ class Database {
   async getRow<T = Record<string, any>>(
     rowId: string,
     options: DatabaseGetRowOptions = {},
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseRowResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -215,7 +215,7 @@ class Database {
   async createRow<T = Record<string, any>>(
     rowData: Record<string, any>,
     options: DatabaseCreateOptions = {},
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseRowResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -273,7 +273,7 @@ class Database {
     rowId: string,
     rowData: Record<string, any>,
     options: DatabaseUpdateOptions = {},
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseRowResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -331,7 +331,7 @@ class Database {
    */
   async bulkUpdate(
     payload: DatabaseBulkUpdatePayload,
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseBulkResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -371,7 +371,7 @@ class Database {
    */
   async deleteRow(
     rowId: string,
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseDeleteResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -418,7 +418,7 @@ class Database {
    */
   async deleteRows(
     rowIds: string[],
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseDeleteResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -468,7 +468,7 @@ class Database {
   async triggerButton(
     rowId: string,
     columnId: string,
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<DatabaseTriggerResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
