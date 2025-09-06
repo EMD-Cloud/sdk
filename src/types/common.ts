@@ -10,14 +10,20 @@ export interface AppOptionsType {
   authSchema?: string
   headerApiTokenKey?: string
   apiToken?: string
+  defaultAuthType?: AuthType
 }
 
+/**
+ * Authentication type for API requests
+ */
 export enum AuthType {
+  /** User session authentication - available in both client and server environments */
   AuthToken = 'auth-token',
+  /** API key authentication - only available in server environment */
   ApiToken = 'api-token',
 }
 
 export type CallOptions = {
-  authType: AuthType
+  authType?: AuthType
   ignoreFormatResponse?: boolean
 }

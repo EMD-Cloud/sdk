@@ -26,7 +26,9 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
 
 ### Key Design Patterns
 - **Environment-aware**: SDK differentiates between client/server environments - API tokens only work server-side
-- **Auth types**: Supports both AuthToken (user sessions) and ApiToken (server-side) authentication
+- **Configuration-based authentication**: Set `defaultAuthType` during SDK initialization (smart defaults based on environment and available tokens)
+- **Auth types**: Supports both AuthToken (user sessions) and ApiToken (server-side) authentication via AuthType enum
+- **Optional auth overrides**: Methods accept optional authType parameter to override the configured default when needed
 - **OAuth flow**: Social login via VK/Yandex - initiate with `socialLogin()`, handle callback, exchange secret with `exchangeOAuthToken()`
 - **Database collections**: Each Database instance is scoped to a specific collection within the app's space - create multiple instances for different collections
 - **MongoDB-style queries**: Database module supports complex filtering with `$and`, `$or`, and comparison operators
@@ -35,11 +37,14 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
 
 ### Type System
 All types are in `src/types/` with strict TypeScript mode enabled. Key interfaces:
-- `AppOptionsType`: SDK configuration interface
+- `AppOptionsType`: SDK configuration interface (includes optional `defaultAuthType`)
+- `AuthType`: Enum for authentication types ('auth-token' | 'api-token')
+- `CallOptions`: Optional authentication override interface with optional `authType`
 - `UserData`: Complete user profile structure
 - `DatabaseRowData<T>`: Generic database row structure with flexible data typing
 - `DatabaseQuery`: MongoDB-style query interface with `$and`, `$or` support
 - `DatabaseListOptions`: Comprehensive options for row retrieval (pagination, sorting, filtering)
+- `DatabaseSaveMode`: Enum for save operations (SYNC | ASYNC)
 - `ResponseData<T>` / `ResponseError`: Standardized API response types
 
 ### Build Configuration

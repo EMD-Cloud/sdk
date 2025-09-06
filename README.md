@@ -59,7 +59,7 @@ Done! The SDK is ready for use.
 To use the EMD Cloud SDK, make sure to import it from the appropriate module in your JavaScript code:
 
 ```javascript
-import { EmdCloud } from '@emd-cloud/sdk'
+import { EmdCloud, AuthType, AppEnvironment } from '@emd-cloud/sdk'
 ```
 
 ### Creating an instance
@@ -67,10 +67,19 @@ import { EmdCloud } from '@emd-cloud/sdk'
 To create an instance of the  `EmdCloud`  class, you need to provide a configuration object containing parameters such as  `environment`,  `appId`, and optionally  `apiUrl`,  `authSchema`, and  `token`. Here’s an example of how to do this:
 
 ```javascript
+// Server environment example
 const emdCloud = new EmdCloud({
-	environment: 'server', // or 'client' for client-side usage
+	environment: AppEnvironment.Server,
 	appId: 'your-app-id',
-	apiToken: 'your-auth-token' // Required if server mode is selected
+	apiToken: 'your-api-token',
+	defaultAuthType: AuthType.ApiToken // Optional: set default auth type
+})
+
+// Client environment example  
+const clientSdk = new EmdCloud({
+	environment: AppEnvironment.Client,
+	appId: 'your-app-id'
+	// defaultAuthType automatically set to AuthType.AuthToken for client
 })
 ```
 

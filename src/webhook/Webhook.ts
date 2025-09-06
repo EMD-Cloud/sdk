@@ -33,7 +33,7 @@ class Webhook {
   async call(
     id: string,
     requestOptions: RequestInit,
-    callOptions: CallOptions,
+    callOptions: CallOptions = {},
   ): Promise<WebhookData | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 

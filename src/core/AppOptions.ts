@@ -9,6 +9,7 @@ class AppOptions {
   private readonly authSchema: AppOptionsType['authSchema']
   private readonly headerApiTokenKey: AppOptionsType['headerApiTokenKey']
   private readonly environment: AppOptionsType['environment']
+  private readonly defaultAuthType: AppOptionsType['defaultAuthType']
   private authToken?: string
 
   constructor({
@@ -18,6 +19,7 @@ class AppOptions {
     headerApiTokenKey = 'apitoken',
     apiToken = '',
     environment,
+    defaultAuthType,
   }: AppOptionsType) {
     this.apiUrl = apiUrl
     this.appId = appId
@@ -25,6 +27,7 @@ class AppOptions {
     this.authSchema = authSchema
     this.headerApiTokenKey = headerApiTokenKey
     this.environment = environment
+    this.defaultAuthType = defaultAuthType || this.determineDefaultAuthType()
   }
 
   getOptions() {
@@ -35,16 +38,25 @@ class AppOptions {
     return this.environment
   }
 
+  private determineDefaultAuthType(): AuthType {
+    if (this.environment === 'client') {
+      return 'auth-token' as AuthType
+    }
+    // Server: use ApiToken if available, otherwise AuthToken
+    return this.apiToken ? ('api-token' as AuthType) : ('auth-token' as AuthType)
+  }
+
   getAuthorizationHeader(
-    authType: AuthType = 'auth-token' as AuthType,
+    authType?: AuthType,
   ): Record<string, string> {
-    if (authType === 'auth-token') {
+    const effectiveAuthType = authType || this.defaultAuthType
+    if (effectiveAuthType === 'auth-token') {
       if (!this.authToken) throw new ValidationError('Unable auth token')
 
       return { Authorization: `${this.authSchema} ${this.authToken}` }
     }
 
-    if (authType === 'api-token') {
+    if (effectiveAuthType === 'api-token') {
       if (this.environment === 'client') {
         throw new NotAllowedError(
           `Obtaining an apiToken is prohibited on the client side`,
@@ -54,7 +66,7 @@ class AppOptions {
       return { [String(this.headerApiTokenKey)]: String(this.apiToken) }
     }
 
-    throw new ValidationError(`Not support current authType (${authType})`)
+    throw new ValidationError(`Not support current authType (${effectiveAuthType})`)
   }
 
   setAuthToken(token: string) {
