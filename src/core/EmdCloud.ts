@@ -32,8 +32,6 @@ class EmdCloud {
    * });
    */
   constructor(opts: AppOptionsType) {
-    const applicationOptions = new AppOptions(opts)
-
     if (!opts.environment) {
       throw new ValidationError('The "environment" option is required.')
     }
@@ -46,10 +44,12 @@ class EmdCloud {
       throw new ValidationError('The "apiToken" option is required.')
     }
 
-    this.applicationOptions = applicationOptions
-    this.auth = new Auth(applicationOptions)
-    this.webhook = new Webhook(applicationOptions)
-    this.setAuthToken = applicationOptions.setAuthToken
+    this.applicationOptions = new AppOptions(opts)
+    this.auth = new Auth(this.applicationOptions)
+    this.webhook = new Webhook(this.applicationOptions)
+    this.setAuthToken = this.applicationOptions.setAuthToken.bind(
+      this.applicationOptions,
+    )
   }
 
   /**
