@@ -415,6 +415,66 @@ class Auth {
 
     return data
   }
+
+  /**
+   * Asynchronously updates an existing user's information.
+   *
+   * @param {Object} payload - The payload containing user update data.
+   * @param {string} [payload._id] - The unique identifier of the user (if not provided, the current authenticated user is updated).
+   * @param {string} [payload.firstName] - The updated first name of the user.
+   * @param {string} [payload.lastName] - The updated last name of the user.
+   * @param {string} [payload.patronymicName] - The updated patronymic (middle) name of the user.
+   * @param {string} [payload.login] - The new login identifier for the user.
+   * @param {Record<string, any>} [payload.customFields] - Additional custom fields to update.
+   * @param {string} [payload.avatarUrl] - URL to the user’s avatar image.
+   * @param {string} [payload.password] - The user’s current password (required for sensitive updates in some cases).
+   * @param {string} [payload.oldPassword] - The current password (when changing password).
+   * @param {string} [payload.newPassword1] - The new password (first entry).
+   * @param {string} [payload.newPassword2] - The new password (confirmation).
+   * @param {string} [payload.accountStatus] - The status of the account (e.g., 'active', 'disabled').
+   * @param {boolean} [payload.staffManage] - Whether the user has staff management permissions.
+   * @returns {Promise<UserData|ServerError>} A promise resolving with the updated user data,
+   * or an error if the update fails.
+   * @async
+   * @example
+   * await emdCloud.auth.updateUser({
+   *   _id: 'user123',
+   *   firstName: 'Jane',
+   *   lastName: 'Doe',
+   *   avatarUrl: 'https://example.com/avatar.png',
+   *   customFields: { department: 'Sales' },
+   * });
+   */
+  async updateUser(payload: {
+    _id?: string
+    firstName?: string
+    lastName?: string
+    patronymicName?: string
+    login?: string
+    customFields?: Record<string, any>
+    avatarUrl?: string
+    password?: string
+    oldPassword?: string
+    newPassword1?: string
+    newPassword2?: string
+    accountStatus?: string
+    staffManage?: boolean
+  }): Promise<UserData | ServerError> {
+    const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    const authenticationHeader =
+      this.applicationOptions.getAuthorizationHeader()
+
+    const res = await apiRequest(`${apiUrl}/api/${app}/user`, {
+      headers: { 'Content-Type': 'application/json', ...authenticationHeader },
+      body: JSON.stringify(payload),
+      method: 'PUT',
+    })
+
+    const data = responseFormatter(res) as UserData
+
+    return data
+  }
 }
 
 export { Auth }

@@ -381,6 +381,46 @@ await emdCloud.auth.forgotPasswordChange({
 }) // On success, will return _id for the password update request
 ```
 
+#### Method:  `auth.updateUser`
+
+**Description:**  
+This method updates an existing user's information.  
+It can be used to change profile data (first name, last name, avatar, custom fields), login credentials, account status, or password.  
+If `_id` is omitted, the update applies to the currently authenticated user.
+
+**Parameters:**
+
+-   `_id` (string, optional): Unique identifier of the user.  
+-   `firstName` (string, optional): Updated first name.  
+-   `lastName` (string, optional): Updated last name.  
+-   `patronymicName` (string, optional): Updated patronymic (middle) name.  
+-   `login` (string, optional): New login identifier.  
+-   `customFields` (Record<string, any>, optional): Additional custom fields to update.  
+-   `avatarUrl` (string, optional): URL to the user's avatar image.  
+-   `password` (string, optional): Current password (may be required for sensitive updates).  
+-   `oldPassword` (string, optional): Current password (when changing password).  
+-   `newPassword1` (string, optional): New password (first entry).  
+-   `newPassword2` (string, optional): New password (confirmation).  
+-   `accountStatus` (string, optional): Status of the account (e.g., `'active'`, `'disabled'`).  
+-   `staffManage` (boolean, optional): Whether the user has staff management permissions.  
+
+**Returns:**  
+
+Returns a `Promise` that resolves to one of the following:  
+
+- updated user data (`UserData`)  
+- server error (`ServerError`)  
+
+**Example:**  
+```javascript
+await emdCloud.auth.updateUser({
+  _id: 'user123',
+  firstName: 'Jane',
+  lastName: 'Doe',
+  avatarUrl: 'https://example.com/avatar.png',
+  customFields: { department: 'Sales', role: 'Manager' },
+}) // On success, will return updated UserData object
+
 <br>
 <br>
 
