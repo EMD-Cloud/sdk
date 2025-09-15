@@ -47,8 +47,6 @@ class Auth {
 
     const data = responseFormatter(res) as UserData
 
-    this.applicationOptions.setAuthToken(data.token)
-
     return data
   }
 
