@@ -18,6 +18,7 @@
 		-   [Method: auth.forgotPassword](#method--authforgotpassword)
 		-   [Method: auth.forgotPasswordCheckCode](#method--authforgotpasswordcheckcode)
 		-   [Method: auth.forgotPasswordChange](#method--authforgotpasswordchange)
+		-   [Method: auth.updateUser](#method--authupdateuser)
 	-   [Webhook methods](#webhook-methods)
 		-   [Method: webhook.call](#method--webhookcall)
 	-   [Database methods](#database-methods)
@@ -123,6 +124,7 @@ This method authorizes the user by sending a request to the server to obtain inf
 Returns a  `Promise`  that resolves to one of the following:
 
 -   user data, including the token.
+-   `null` when the stored auth token is valid but no user session exists (for example, when the token was revoked).
 -   server error.
 -   validation error if the token is missing.
 
@@ -131,7 +133,7 @@ If the token is absent, an error will be thrown with the message "Unable auth to
 
 **Example:**
 ```javascript
-await emdCloud.auth.authorization(); // On success, will return user data
+await emdCloud.auth.authorization(); // Returns user data or null when the session is missing
 ```
 
 <br>
@@ -420,6 +422,7 @@ await emdCloud.auth.updateUser({
   avatarUrl: 'https://example.com/avatar.png',
   customFields: { department: 'Sales', role: 'Manager' },
 }) // On success, will return updated UserData object
+```
 
 <br>
 <br>

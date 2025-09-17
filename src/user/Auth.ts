@@ -22,16 +22,17 @@ class Auth {
   }
 
   /**
-   * Attempts to authorize a user using a stored authentication token.
+   * Attempts to authorize the current user using a stored authentication token.
    *
-   * This method retrieves the application's API URL and app identifier from the application options,
-   * then uses an existing authentication token to make a POST request to the authorization endpoint.
-   * If the token is not present, it throws a ValidationError. After receiving the response, it formats
-   * the response data and updates the token stored in the application options with the new token received.
+   * This method retrieves the API URL and app identifier from the application options,
+   * then uses the existing authentication token to call the authorization endpoint.
+   * If the token is not present, it throws a ValidationError. The formatted response
+   * is returned as-is, which can contain user data when the session is active or `null`
+   * when the token is valid but no session data is available.
    *
    * @throws {ValidationError} Thrown when the authentication token is missing.
-   * @returns {Promise<UserData | ServerError | ValidationError>} Returns a promise that resolves to the user data on successful authorization,
-   *         or throws an error (ServerError or ValidationError) if the authorization fails.
+   * @returns {Promise<UserData | ServerError | ValidationError | null>} Resolves with the user data, `null`,
+   *          or throws a ServerError/ValidationError if the authorization request fails.
    */
   async authorization(): Promise<
     UserData | ServerError | ValidationError | null
