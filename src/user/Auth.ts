@@ -33,7 +33,9 @@ class Auth {
    * @returns {Promise<UserData | ServerError | ValidationError>} Returns a promise that resolves to the user data on successful authorization,
    *         or throws an error (ServerError or ValidationError) if the authorization fails.
    */
-  async authorization(): Promise<UserData | ServerError | ValidationError> {
+  async authorization(): Promise<
+    UserData | ServerError | ValidationError | null
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
