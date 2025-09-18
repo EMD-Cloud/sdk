@@ -1,5 +1,7 @@
 import AppOptions from 'src/core/AppOptions'
+import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ServerError } from 'src/errors/ServerError'
+import { ValidationError } from 'src/errors/ValidationError'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
 import type { CallOptions } from 'src/types/common'
@@ -50,9 +52,20 @@ class Database {
   ): Promise<DatabaseRowsResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
-      callOptions.authType,
-    )
+    let authorizationHeader: Record<string, string> = {}
+
+    try {
+      authorizationHeader = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const {
       search = '',
@@ -115,9 +128,20 @@ class Database {
   ): Promise<DatabaseCountResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
-      callOptions.authType,
-    )
+    let authorizationHeader: Record<string, string> = {}
+
+    try {
+      authorizationHeader = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const { search = '', query = {}, createdAt = null } = options
 
@@ -169,9 +193,20 @@ class Database {
   ): Promise<DatabaseRowResponse<T> | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
-      callOptions.authType,
-    )
+    let authorizationHeader: Record<string, string> = {}
+
+    try {
+      authorizationHeader = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const { useHumanReadableNames = false } = options
 
