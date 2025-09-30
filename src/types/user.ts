@@ -49,8 +49,28 @@ export interface ForgotPassCheckCodeData {
 export enum SocialProvider {
   VK = 'vk',
   YANDEX = 'yandex',
+  STEAM = 'steam',
+  TWITCH = 'twitch',
 }
 
 export interface OAuthUrlResponse {
   url: string
+}
+
+export interface SocialAttachResponse {
+  url: string
+}
+
+export interface UserListOptions {
+  search?: string
+  limit?: number
+  page?: number
+  orderBy?: string
+  sort?: 'ASC' | 'DESC'
+  accountStatus?: AccountStatus | null
+}
+
+export interface UserListResponse {
+  data: UserData[]
+  total: number
 }
