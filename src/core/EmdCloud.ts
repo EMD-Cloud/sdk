@@ -1,12 +1,13 @@
 import AppOptions from './AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
 import type { AppOptionsType } from 'src/types/common'
-import { Auth } from 'src/user'
+import { Auth, UserInteraction } from 'src/user'
 import { Webhook } from 'src/webhook'
 import { Database } from 'src/database'
 
 class EmdCloud {
   public auth: Auth
+  public user: UserInteraction
   public webhook: Webhook
   public setAuthToken: AppOptions['setAuthToken']
   private readonly applicationOptions: AppOptions
@@ -46,6 +47,7 @@ class EmdCloud {
 
     this.applicationOptions = new AppOptions(opts)
     this.auth = new Auth(this.applicationOptions)
+    this.user = new UserInteraction(this.applicationOptions)
     this.webhook = new Webhook(this.applicationOptions)
     this.setAuthToken = this.applicationOptions.setAuthToken.bind(
       this.applicationOptions,

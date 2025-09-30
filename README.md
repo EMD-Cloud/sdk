@@ -19,6 +19,12 @@
 		-   [Method: auth.forgotPasswordCheckCode](#method--authforgotpasswordcheckcode)
 		-   [Method: auth.forgotPasswordChange](#method--authforgotpasswordchange)
 		-   [Method: auth.updateUser](#method--authupdateuser)
+	-   [User Interaction methods](#user-interaction-methods)
+		-   [Method: user.attachSocialAccount](#method--userattachsocialaccount)
+		-   [Method: user.detachSocialAccount](#method--userdetachsocialaccount)
+		-   [Method: user.ping](#method--userping)
+		-   [Method: user.getUserList](#method--usergetuserlist)
+		-   [Method: user.getUserDetails](#method--usergetuserdetails)
 	-   [Webhook methods](#webhook-methods)
 		-   [Method: webhook.call](#method--webhookcall)
 	-   [Database methods](#database-methods)
@@ -422,6 +428,185 @@ await emdCloud.auth.updateUser({
   avatarUrl: 'https://example.com/avatar.png',
   customFields: { department: 'Sales', role: 'Manager' },
 }) // On success, will return updated UserData object
+```
+
+<br>
+<br>
+
+### User Interaction methods:
+
+#### Method:  `user.attachSocialAccount`
+
+**Description:**
+This method initiates the process to attach a social network account (Steam, VK, or Twitch) to the current user. It generates an authorization URL that the user should be redirected to in order to grant permission to link their social account.
+
+**Parameters:**
+
+-   `provider` (SocialProvider): The social provider to attach. Can be `SocialProvider.STEAM`, `SocialProvider.VK`, or `SocialProvider.TWITCH`.
+-   `redirectUrl` (string): The URL to redirect back to after authorization.
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+- An object containing the authorization URL (`{ url: string }`)
+- Server error (`ServerError`)
+
+**Notes:**
+- The provider must be imported from the SDK: `import { SocialProvider } from '@emd-cloud/sdk'`
+- User must be authenticated before calling this method
+- After receiving the URL, redirect the user to it for social account authorization
+
+**Example:**
+```javascript
+import { SocialProvider } from '@emd-cloud/sdk'
+
+// Attach a Steam account
+const response = await emdCloud.user.attachSocialAccount({
+  provider: SocialProvider.STEAM,
+  redirectUrl: 'https://myapp.com/profile'
+});
+
+// Redirect user to authorization page
+window.location.href = response.url;
+```
+
+<br>
+
+#### Method:  `user.detachSocialAccount`
+
+**Description:**
+This method removes the connection between the user's account and the specified social provider (Steam, VK, or Twitch).
+
+**Parameters:**
+
+-   `provider` (SocialProvider): The social provider to detach. Can be `SocialProvider.STEAM`, `SocialProvider.VK`, or `SocialProvider.TWITCH`.
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+- Success status object (`{ success: boolean }`)
+- Server error (`ServerError`)
+
+**Example:**
+```javascript
+import { SocialProvider } from '@emd-cloud/sdk'
+
+// Detach Steam account
+const result = await emdCloud.user.detachSocialAccount(SocialProvider.STEAM);
+if (result.success) {
+  console.log('Steam account detached successfully');
+}
+```
+
+<br>
+
+#### Method:  `user.ping`
+
+**Description:**
+This method updates the current user's last activity timestamp. It can be used to track user presence and activity, updating the user's `ping` field with the current timestamp to determine if a user is online or their last seen time.
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+- Success status object (`{ success: boolean }`)
+- Server error (`ServerError`)
+
+**Example:**
+```javascript
+// Update user activity once
+const result = await emdCloud.user.ping();
+if (result.success) {
+  console.log('User activity updated');
+}
+
+// Ping user every 30 seconds to maintain online status
+setInterval(async () => {
+  await emdCloud.user.ping();
+}, 30000);
+```
+
+<br>
+
+#### Method:  `user.getUserList`
+
+**Description:**
+This method retrieves a paginated list of users in the application. It is typically available only to staff members with appropriate permissions and allows searching, filtering, sorting, and paginating through the user base.
+
+**Parameters:**
+
+-   `options` (UserListOptions, optional): Optional parameters for filtering and pagination:
+    -   `search` (string, optional): Search term to filter users by name or login.
+    -   `limit` (number, optional): Maximum number of users to return per page (default: 50).
+    -   `page` (number, optional): Page number for pagination, 0-indexed (default: 0).
+    -   `orderBy` (string, optional): Field to sort by (default: 'createdAt').
+    -   `sort` ('ASC'|'DESC', optional): Sort direction (default: 'DESC').
+    -   `accountStatus` (AccountStatus|null, optional): Filter by account status.
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+- User list with count (`{ data: UserData[], total: number }`)
+- Server error (`ServerError`)
+
+**Example:**
+```javascript
+import { AccountStatus } from '@emd-cloud/sdk'
+
+// Get first page of users
+const users = await emdCloud.user.getUserList({
+  limit: 20,
+  page: 0,
+  orderBy: 'createdAt',
+  sort: 'DESC'
+});
+console.log(`Found ${users.total} users`, users.data);
+
+// Search for specific users
+const searchResults = await emdCloud.user.getUserList({
+  search: 'john',
+  limit: 10
+});
+
+// Filter by account status
+const approvedUsers = await emdCloud.user.getUserList({
+  accountStatus: AccountStatus.Approved
+});
+```
+
+<br>
+
+#### Method:  `user.getUserDetails`
+
+**Description:**
+This method retrieves detailed information about a specific user by their ID. It is typically available only to staff members with appropriate permissions, or to users requesting their own information. Encrypted fields may be hidden depending on permissions.
+
+**Parameters:**
+
+-   `userId` (string): The unique identifier (_id) of the user to retrieve.
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+- Complete user data (`UserData`)
+- Server error (`ServerError`)
+
+**Example:**
+```javascript
+// Get details of a specific user
+const user = await emdCloud.user.getUserDetails('507f1f77bcf86cd799439011');
+console.log('User details:', user);
+
+// Get current user's own details
+const currentUser = await emdCloud.auth.authorization();
+if (currentUser && currentUser._id) {
+  const fullDetails = await emdCloud.user.getUserDetails(currentUser._id);
+  console.log('My full details:', fullDetails);
+}
 ```
 
 <br>
