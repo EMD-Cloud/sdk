@@ -1,4 +1,6 @@
 export * from './core'
 export * from './database'
 export * from './types'
+export * from './uploader'
 export { AuthType, AppEnvironment } from './types/common'
+export { ReadPermission, UploadStatus } from './types/uploader'

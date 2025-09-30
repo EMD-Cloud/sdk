@@ -25,6 +25,10 @@
 		-   [Method: user.ping](#method--userping)
 		-   [Method: user.getUserList](#method--usergetuserlist)
 		-   [Method: user.getUserDetails](#method--usergetuserdetails)
+	-   [Uploader methods](#uploader-methods)
+		-   [Method: uploader.uploadFile](#method--uploaderuploadfile)
+		-   [Method: uploader.getFileUrl](#method--uploadergetfileurl)
+		-   [Method: uploader.getMetaUrl](#method--uploadergetmetaurl)
 	-   [Webhook methods](#webhook-methods)
 		-   [Method: webhook.call](#method--webhookcall)
 	-   [Database methods](#database-methods)
@@ -52,13 +56,15 @@ The EMD Cloud SDK enables applications to interact with the [EMD Cloud](https://
 
 	**NPM**
 	```sh
-	npm install @emd-cloud/sdk
+	npm install @emd-cloud/sdk tus-js-client uuid
 	```
 
 	**Yarn**
 	```sh
-	yarn add @emd-cloud/sdk
+	yarn add @emd-cloud/sdk tus-js-client uuid
 	```
+
+	**Note:** `tus-js-client` and `uuid` are peer dependencies required for file upload functionality.
 
 Done! The SDK is ready for use.
 
@@ -607,6 +613,157 @@ if (currentUser && currentUser._id) {
   const fullDetails = await emdCloud.user.getUserDetails(currentUser._id);
   console.log('My full details:', fullDetails);
 }
+```
+
+<br>
+<br>
+
+### Uploader methods:
+
+The uploader module provides file upload functionality using the TUS protocol for resumable uploads. Files can be uploaded with progress tracking, custom permissions, and automatic retry capabilities.
+
+#### Method:  `uploader.uploadFile`
+
+**Description:**
+Uploads a file to EMD Cloud storage using chunked upload with the TUS protocol. This method provides resumable uploads with support for progress tracking, automatic retries, and flexible permission settings. The upload can be paused and resumed even after connection interruptions.
+
+**Parameters:**
+
+-   `file` (File): The browser File object to upload.
+-   `options` (object, optional): Configuration options for the upload:
+    -   `integration` (string, optional): S3 integration identifier (default: 'default').
+    -   `chunkSize` (number, optional): Size of each upload chunk in bytes.
+    -   `retryDelays` (array, optional): Retry delay intervals in milliseconds (default: [0, 3000, 5000, 10000, 20000]).
+    -   `readPermission` (ReadPermission, optional): Access permission level for the file (default: ReadPermission.OnlyAppStaff).
+    -   `permittedUsers` (array, optional): Array of user IDs who can access the file (required when readPermission is OnlyPermittedUsers).
+    -   `presignedUrlTTL` (number, optional): Time-to-live for presigned URLs in minutes (default: 60).
+    -   `headers` (object, optional): Additional HTTP headers to include in upload requests.
+-   `callbacks` (object, optional): Event callbacks for upload lifecycle:
+    -   `onProgress` (function, optional): Called on progress updates with `(progress: UploadProgress) => void`.
+    -   `onSuccess` (function, optional): Called when upload succeeds with `(fileId: string, fileUrl: string) => void`.
+    -   `onError` (function, optional): Called when upload fails with `(error: Error) => void`.
+
+**Returns:**
+
+Returns an object containing:
+-   `uploadId` (string): Unique identifier for this upload.
+-   `file` (UploadFile): Object to track upload state with properties:
+    -   `id` (string): Upload identifier.
+    -   `fileName` (string): Name of the file being uploaded.
+    -   `status` (UploadStatus): Current upload status (pending, uploading, success, failed).
+    -   `progress` (UploadProgress, optional): Current upload progress.
+    -   `fileUrl` (string, optional): URL to access the file (available after successful upload).
+    -   `error` (Error, optional): Error that occurred during upload (if failed).
+    -   `abort` (function): Function to abort the upload.
+
+**Notes:**
+- User must be authenticated before uploading files.
+- The `ReadPermission` enum must be imported: `import { ReadPermission } from '@emd-cloud/sdk'`.
+- If `readPermission` is set to `OnlyPermittedUsers`, the `permittedUsers` array is required.
+
+**Example:**
+```javascript
+import { ReadPermission } from '@emd-cloud/sdk'
+
+// Basic file upload with progress tracking
+const { file } = emdCloud.uploader.uploadFile(myFile, {
+  readPermission: ReadPermission.OnlyAuthUser,
+  presignedUrlTTL: 120
+}, {
+  onProgress: (progress) => {
+    console.log(`Upload progress: ${progress.percentage}%`);
+    console.log(`Uploaded ${progress.bytesUploaded} of ${progress.bytesTotal} bytes`);
+  },
+  onSuccess: (fileId, fileUrl) => {
+    console.log('File uploaded successfully!');
+    console.log('File URL:', fileUrl);
+  },
+  onError: (error) => {
+    console.error('Upload failed:', error.message);
+  }
+});
+
+// Check upload status
+console.log('Current status:', file.status);
+
+// Abort upload if needed
+// file.abort();
+```
+
+**Example with specific user permissions:**
+```javascript
+import { ReadPermission } from '@emd-cloud/sdk'
+
+// Upload document accessible only to specific users
+const { file } = emdCloud.uploader.uploadFile(document, {
+  readPermission: ReadPermission.OnlyPermittedUsers,
+  permittedUsers: ['user-id-1', 'user-id-2', 'user-id-3']
+}, {
+  onSuccess: (fileId, fileUrl) => {
+    console.log('Document uploaded and accessible to permitted users');
+  }
+});
+```
+
+**Example with public access:**
+```javascript
+import { ReadPermission } from '@emd-cloud/sdk'
+
+// Upload publicly accessible file
+const { file } = emdCloud.uploader.uploadFile(imageFile, {
+  readPermission: ReadPermission.Public,
+  presignedUrlTTL: 1440 // 24 hours
+}, {
+  onSuccess: (fileId, fileUrl) => {
+    console.log('Public file URL:', fileUrl);
+  }
+});
+```
+
+<br>
+
+#### Method:  `uploader.getFileUrl`
+
+**Description:**
+Constructs the URL to access an uploaded file. This method is useful when you have a file ID and need to generate the access URL.
+
+**Parameters:**
+
+-   `integration` (string): The integration ID used during upload.
+-   `fileId` (string): The file identifier (base64url encoded).
+
+**Returns:**
+
+Returns a string containing the complete URL to access the file.
+
+**Example:**
+```javascript
+const fileUrl = emdCloud.uploader.getFileUrl('default', 'abc123def456');
+console.log(fileUrl);
+// Output: https://api.emd.one/api/myapp/uploader/chunk/default/file/abc123def456
+```
+
+<br>
+
+#### Method:  `uploader.getMetaUrl`
+
+**Description:**
+Constructs the URL to access file metadata. This can be used to retrieve information about an uploaded file without downloading the actual file content.
+
+**Parameters:**
+
+-   `integration` (string): The integration ID used during upload.
+-   `fileId` (string): The file identifier (base64url encoded).
+
+**Returns:**
+
+Returns a string containing the complete URL to access file metadata.
+
+**Example:**
+```javascript
+const metaUrl = emdCloud.uploader.getMetaUrl('default', 'abc123def456');
+console.log(metaUrl);
+// Output: https://api.emd.one/api/myapp/uploader/chunk/default/meta/abc123def456
 ```
 
 <br>
