@@ -4,11 +4,13 @@ import type { AppOptionsType } from 'src/types/common'
 import { Auth, UserInteraction } from 'src/user'
 import { Webhook } from 'src/webhook'
 import { Database } from 'src/database'
+import { Uploader } from 'src/uploader'
 
 class EmdCloud {
   public auth: Auth
   public user: UserInteraction
   public webhook: Webhook
+  public uploader: Uploader
   public setAuthToken: AppOptions['setAuthToken']
   private readonly applicationOptions: AppOptions
 
@@ -49,6 +51,7 @@ class EmdCloud {
     this.auth = new Auth(this.applicationOptions)
     this.user = new UserInteraction(this.applicationOptions)
     this.webhook = new Webhook(this.applicationOptions)
+    this.uploader = new Uploader(this.applicationOptions)
     this.setAuthToken = this.applicationOptions.setAuthToken.bind(
       this.applicationOptions,
     )
