@@ -9,8 +9,8 @@ import type {
   UploadFile,
   UploadStatus,
   UploadProgress,
-  ReadPermission,
 } from 'src/types/uploader'
+import { ReadPermission } from 'src/types/uploader'
 
 class Uploader {
   private applicationOptions: AppOptions
@@ -83,7 +83,7 @@ class Uploader {
       integration = 'default',
       chunkSize = 5 * 1024 * 1024, // Default 5MB chunks
       retryDelays = [0, 3000, 5000, 10000, 20000],
-      readPermission = 'onlyAppStaff' as ReadPermission,
+      readPermission = ReadPermission.OnlyAppStaff,
       permittedUsers,
       presignedUrlTTL = 60,
       headers = {},
