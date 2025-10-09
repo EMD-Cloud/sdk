@@ -76,10 +76,10 @@ export interface DatabaseRowsResponse<T = Record<string, any>> {
 }
 
 export interface DatabaseCountResponse {
-  success: true
-  data: {
-    count: number
-  }
+  success: true;
+  code: number;
+  count: number;
+  data: number;
 }
 
 export interface DatabaseBulkResponse {

@@ -12,6 +12,7 @@ import type {
   DatabaseUpdateOptions,
   DatabaseBulkUpdatePayload,
   DatabaseGetRowOptions,
+  DatabaseRowData,
   DatabaseRowResponse,
   DatabaseRowsResponse,
   DatabaseCountResponse,
@@ -47,9 +48,17 @@ class Database {
    * );
    */
   async getRows<T = Record<string, any>>(
+    options: DatabaseListOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseRowsResponse<T> | ServerError>
+  async getRows<T = Record<string, any>>(
+    options?: DatabaseListOptions,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseRowsResponse<T>['data'] | ServerError>
+  async getRows<T = Record<string, any>>(
     options: DatabaseListOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowsResponse<T> | ServerError> {
+  ): Promise<DatabaseRowsResponse<T> | DatabaseRowsResponse<T>['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -102,13 +111,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseRowsResponse<T>
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseRowsResponse<T>
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseRowsResponse<T>
     }
 
-    return data
+    return responseFormatter(res) as DatabaseRowsResponse<T>['data']
   }
 
   /**
@@ -124,9 +131,17 @@ class Database {
    * );
    */
   async countRows(
+    options: DatabaseCountOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseCountResponse | ServerError>
+  async countRows(
+    options?: DatabaseCountOptions,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseCountResponse['data'] | ServerError>
+  async countRows(
     options: DatabaseCountOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseCountResponse | ServerError> {
+  ): Promise<DatabaseCountResponse | DatabaseCountResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -163,13 +178,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseCountResponse
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseCountResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseCountResponse
     }
 
-    return data
+    return responseFormatter(res) as DatabaseCountResponse['data']
   }
 
   /**
@@ -188,9 +201,19 @@ class Database {
    */
   async getRow<T = Record<string, any>>(
     rowId: string,
+    options: DatabaseGetRowOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseRowResponse<T> | ServerError>
+  async getRow<T = Record<string, any>>(
+    rowId: string,
+    options?: DatabaseGetRowOptions,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
+  async getRow<T = Record<string, any>>(
+    rowId: string,
     options: DatabaseGetRowOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | ServerError> {
+  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -224,13 +247,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseRowResponse<T>
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseRowResponse<T>
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseRowResponse<T>
     }
 
-    return data
+    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -249,9 +270,19 @@ class Database {
    */
   async createRow<T = Record<string, any>>(
     rowData: Record<string, any>,
+    options: DatabaseCreateOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseRowResponse<T> | ServerError>
+  async createRow<T = Record<string, any>>(
+    rowData: Record<string, any>,
+    options?: DatabaseCreateOptions,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
+  async createRow<T = Record<string, any>>(
+    rowData: Record<string, any>,
     options: DatabaseCreateOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | ServerError> {
+  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -280,13 +311,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseRowResponse<T>
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseRowResponse<T>
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseRowResponse<T>
     }
 
-    return data
+    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -308,9 +337,21 @@ class Database {
   async updateRow<T = Record<string, any>>(
     rowId: string,
     rowData: Record<string, any>,
+    options: DatabaseUpdateOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseRowResponse<T> | ServerError>
+  async updateRow<T = Record<string, any>>(
+    rowId: string,
+    rowData: Record<string, any>,
+    options?: DatabaseUpdateOptions,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
+  async updateRow<T = Record<string, any>>(
+    rowId: string,
+    rowData: Record<string, any>,
     options: DatabaseUpdateOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | ServerError> {
+  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -341,13 +382,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseRowResponse<T>
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseRowResponse<T>
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseRowResponse<T>
     }
 
-    return data
+    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -368,8 +407,16 @@ class Database {
    */
   async bulkUpdate(
     payload: DatabaseBulkUpdatePayload,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseBulkResponse | ServerError>
+  async bulkUpdate(
+    payload: DatabaseBulkUpdatePayload,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseBulkResponse['data'] | ServerError>
+  async bulkUpdate(
+    payload: DatabaseBulkUpdatePayload,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseBulkResponse | ServerError> {
+  ): Promise<DatabaseBulkResponse | DatabaseBulkResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -388,13 +435,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseBulkResponse
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseBulkResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseBulkResponse
     }
 
-    return data
+    return responseFormatter(res) as DatabaseBulkResponse['data']
   }
 
   /**
@@ -408,8 +453,16 @@ class Database {
    */
   async deleteRow(
     rowId: string,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseDeleteResponse | ServerError>
+  async deleteRow(
+    rowId: string,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseDeleteResponse['data'] | ServerError>
+  async deleteRow(
+    rowId: string,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseDeleteResponse | ServerError> {
+  ): Promise<DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -432,13 +485,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseDeleteResponse
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseDeleteResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseDeleteResponse
     }
 
-    return data
+    return responseFormatter(res) as DatabaseDeleteResponse['data']
   }
 
   /**
@@ -455,8 +506,16 @@ class Database {
    */
   async deleteRows(
     rowIds: string[],
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseDeleteResponse | ServerError>
+  async deleteRows(
+    rowIds: string[],
+    callOptions?: CallOptions,
+  ): Promise<DatabaseDeleteResponse['data'] | ServerError>
+  async deleteRows(
+    rowIds: string[],
     callOptions: CallOptions = {},
-  ): Promise<DatabaseDeleteResponse | ServerError> {
+  ): Promise<DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -479,13 +538,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseDeleteResponse
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseDeleteResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseDeleteResponse
     }
 
-    return data
+    return responseFormatter(res) as DatabaseDeleteResponse['data']
   }
 
   /**
@@ -505,8 +562,18 @@ class Database {
   async triggerButton(
     rowId: string,
     columnId: string,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseTriggerResponse | ServerError>
+  async triggerButton(
+    rowId: string,
+    columnId: string,
+    callOptions?: CallOptions,
+  ): Promise<DatabaseTriggerResponse['data'] | ServerError>
+  async triggerButton(
+    rowId: string,
+    columnId: string,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseTriggerResponse | ServerError> {
+  ): Promise<DatabaseTriggerResponse | DatabaseTriggerResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -529,13 +596,11 @@ class Database {
       },
     )
 
-    let data = res as DatabaseTriggerResponse
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as DatabaseTriggerResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as DatabaseTriggerResponse
     }
 
-    return data
+    return responseFormatter(res) as DatabaseTriggerResponse['data']
   }
 }
 

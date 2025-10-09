@@ -15,4 +15,9 @@ export interface ResponseList {
   count: number
 }
 
-export type Response = ResponseData | ResponseList
+export interface ResponseSingleUnit {
+  success: true
+  data: string | number
+}
+
+export type Response = ResponseData | ResponseList | ResponseSingleUnit

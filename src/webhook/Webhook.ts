@@ -4,7 +4,7 @@ import type { UserData } from 'src/types/user'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
 import type { CallOptions } from 'src/types/common'
-import type { WebhookData } from 'src/types/webhook'
+import type { WebhookData, WebhookResponse } from 'src/types/webhook'
 
 class Webhook {
   private applicationOptions: AppOptions
@@ -33,8 +33,18 @@ class Webhook {
   async call(
     id: string,
     requestOptions: RequestInit,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<WebhookResponse | ServerError>
+  async call(
+    id: string,
+    requestOptions: RequestInit,
+    callOptions?: CallOptions,
+  ): Promise<WebhookResponse['data'] | ServerError>
+  async call(
+    id: string,
+    requestOptions: RequestInit,
     callOptions: CallOptions = {},
-  ): Promise<WebhookData | ServerError> {
+  ): Promise<WebhookResponse | WebhookResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -46,13 +56,11 @@ class Webhook {
       headers: { ...authorizationHeader, ...requestOptions?.headers },
     })
 
-    let data = res as WebhookData
-
-    if (!callOptions.ignoreFormatResponse) {
-      data = responseFormatter(res) as WebhookData
+    if (callOptions.ignoreFormatResponse) {
+      return res as WebhookResponse
     }
 
-    return data
+    return responseFormatter(res) as WebhookResponse['data']
   }
 }
 
