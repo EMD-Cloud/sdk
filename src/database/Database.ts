@@ -68,17 +68,6 @@ class Database {
     }
 
     const {
-      search = '',
-      limit = 50,
-      page = 0,
-      orderBy = '',
-      sort = [],
-      query = {},
-      hasOptimiseResponse = false,
-      useHumanReadableNames = false,
-    } = options
-
-    const payload = {
       search,
       limit,
       page,
@@ -87,7 +76,19 @@ class Database {
       query,
       hasOptimiseResponse,
       useHumanReadableNames,
-    }
+    } = options
+
+    const payload: Record<string, any> = {}
+    if (search !== undefined) payload.search = search
+    if (limit !== undefined) payload.limit = limit
+    if (page !== undefined) payload.page = page
+    if (orderBy !== undefined) payload.orderBy = orderBy
+    if (sort !== undefined) payload.sort = sort
+    if (query !== undefined) payload.query = query
+    if (hasOptimiseResponse !== undefined)
+      payload.hasOptimiseResponse = hasOptimiseResponse
+    if (useHumanReadableNames !== undefined)
+      payload.useHumanReadableNames = useHumanReadableNames
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
@@ -143,13 +144,12 @@ class Database {
       }
     }
 
-    const { search = '', query = {}, createdAt = null } = options
+    const { search, query, createdAt } = options
 
-    const payload = {
-      search,
-      query,
-      createdAt,
-    }
+    const payload: Record<string, any> = {}
+    if (search !== undefined) payload.search = search
+    if (query !== undefined) payload.query = query
+    if (createdAt !== undefined) payload.createdAt = createdAt
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/count`,
@@ -260,12 +260,13 @@ class Database {
 
     const { user, notice, useHumanReadableNames } = options
 
-    const payload = {
+    const payload: Record<string, any> = {
       data: rowData,
-      user,
-      notice,
-      useHumanReadableNames,
     }
+    if (user !== undefined) payload.user = user
+    if (notice !== undefined) payload.notice = notice
+    if (useHumanReadableNames !== undefined)
+      payload.useHumanReadableNames = useHumanReadableNames
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
@@ -318,14 +319,15 @@ class Database {
 
     const { user, notice, saveMode, useHumanReadableNames } = options
 
-    const payload = {
+    const payload: Record<string, any> = {
       _id: rowId,
       data: rowData,
-      user,
-      notice,
-      saveMode,
-      useHumanReadableNames,
     }
+    if (user !== undefined) payload.user = user
+    if (notice !== undefined) payload.notice = notice
+    if (saveMode !== undefined) payload.saveMode = saveMode
+    if (useHumanReadableNames !== undefined)
+      payload.useHumanReadableNames = useHumanReadableNames
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,

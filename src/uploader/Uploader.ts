@@ -101,7 +101,8 @@ class Uploader {
     const endpoint = `${apiUrl}/api/${app}/uploader/chunk/${integration}/s3/`
 
     // Get authentication header
-    const authenticationHeader = this.applicationOptions.getAuthorizationHeader()
+    const authenticationHeader =
+      this.applicationOptions.getAuthorizationHeader()
 
     // Build upload metadata
     const metadata: Record<string, string> = {

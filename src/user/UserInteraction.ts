@@ -204,22 +204,16 @@ class UserInteraction {
     const authenticationHeader =
       this.applicationOptions.getAuthorizationHeader()
 
-    const {
-      search = '',
-      limit = 50,
-      page = 0,
-      orderBy = 'createdAt',
-      sort = 'DESC',
-      accountStatus = null,
-    } = options
+    const { search, limit, page, orderBy, sort, accountStatus } = options
 
     const queryParams = new URLSearchParams()
-    if (search) queryParams.set('search', search)
-    queryParams.set('limit', limit.toString())
-    queryParams.set('page', page.toString())
-    queryParams.set('orderBy', orderBy)
-    queryParams.set('sort', sort)
-    if (accountStatus) queryParams.set('accountStatus', accountStatus)
+    if (search !== undefined) queryParams.set('search', search)
+    if (limit !== undefined) queryParams.set('limit', limit.toString())
+    if (page !== undefined) queryParams.set('page', page.toString())
+    if (orderBy !== undefined) queryParams.set('orderBy', orderBy)
+    if (sort !== undefined) queryParams.set('sort', sort)
+    if (accountStatus !== undefined && accountStatus !== null)
+      queryParams.set('accountStatus', accountStatus)
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/user/list?${queryParams.toString()}`,
