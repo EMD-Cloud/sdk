@@ -1,5 +1,6 @@
 export * from './core'
 export * from './database'
+export * from './errors'
 export * from './types'
 export * from './uploader'
 export { AuthType, AppEnvironment } from './types/common'
