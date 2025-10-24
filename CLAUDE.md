@@ -18,12 +18,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API, supporting both client-side and server-side environments.
 
 ### Core Structure
-- **EmdCloud class** (`src/core/EmdCloud.ts`): Main SDK entry point with `auth`, `user`, `webhook`, `uploader`, and `database` modules
+- **EmdCloud class** (`src/core/EmdCloud.ts`): Main SDK entry point with `auth`, `user`, `webhook`, `uploader`, `chat`, and `database` modules
 - **AppOptions** (`src/core/AppOptions.ts`): Manages SDK configuration, API URLs, and auth headers
 - **Auth module** (`src/user/Auth.ts`): Handles user authentication, registration, password reset, and social OAuth login (VK/Yandex)
 - **UserInteraction module** (`src/user/UserInteraction.ts`): Manages user interactions, social account connections (Steam/VK/Twitch), activity tracking (ping), and user management operations (list/details)
 - **Uploader module** (`src/uploader/Uploader.ts`): Handles file uploads using TUS protocol with progress tracking, resumable uploads, and permission-based access control
 - **Webhook module** (`src/webhook/Webhook.ts`): Execute webhooks with flexible auth options
+- **Chat module** (`src/chat/Chat.ts`): REST API operations for chat channels and messages (create, list, send, delete)
+- **ChatWebSocket module** (`src/chat/ChatWebSocket.ts`): Real-time chat messaging via WebSocket with Pusher protocol implementation
+- **ChatAuth helper** (`src/chat/ChatAuth.ts`): JWS authentication for WebSocket channel subscriptions
 - **Database module** (`src/database/Database.ts`): CRUD operations for database collections with MongoDB-style querying
 
 ### Key Design Patterns
@@ -47,6 +50,27 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
   - **Abort capability**: Cancel in-progress uploads programmatically
 - **Database collections**: Each Database instance is scoped to a specific collection within the app's space - create multiple instances for different collections
 - **MongoDB-style queries**: Database module supports complex filtering with `$and`, `$or`, and comparison operators
+- **Chat functionality**: Two-part system for chat communication:
+  - **Chat REST API** (`chat`): Manage channels and messages via HTTP (create channels, send messages, list conversations)
+  - **ChatWebSocket** (`chatWebSocket()`): Real-time messaging via WebSocket with event-driven architecture
+- **Chat channel types**: Support for multiple chat scenarios:
+  - **Public**: Open channels for all authenticated users
+  - **Staff-to-user**: Support tickets between staff and users
+  - **Peer-to-peer**: Direct messages between specific users
+  - **Staff**: Internal staff conversations
+- **Real-time messaging with WebSocket**: ChatWebSocket implements Pusher WebSocket protocol:
+  - **Native WebSocket API**: Uses native WebSocket (Node.js v22+ and all modern browsers)
+  - **Zero dependencies**: No external WebSocket libraries required
+  - **JWS Authentication**: Channels authenticated using JWT tokens from SDK (via `ChatAuth` helper)
+  - **Configurable URLs**: Both `apiUrl` and `websocketUrl` are configurable in `AppOptions` (defaults: `https://api.emd.one`, `wss://ws.emd.one`)
+  - **Auto-reconnection**: Exponential backoff reconnection strategy (1s → 30s max)
+  - **Ping/pong keepalive**: 30-second intervals to maintain connection
+  - **Constructor callbacks**: Event handlers can be set during instantiation or later via `setCallbacks()`
+  - **Event handlers**: `onMessageReceived`, `onMessageDeleted`, `onSupportCountUpdated`, `onSupportChannelUpdated`, `onConnectionStateChange`, `onError`
+  - **Channel subscriptions**: Subscribe to `chat-{channelId}` for messages, `private-space` for support updates
+  - **Connection states**: Tracking via `connecting`, `connected`, `disconnected`, `error` states
+  - **No console pollution**: Only console.error for critical issues, no verbose logging
+- **WebSocket architecture**: Uses `app` from SDK config (no redundant appKey), consistent with REST API modules
 - **Response handling**: All API responses follow `ResponseData<T>` format with data/error structure
 - **Error classes**: Custom error types in `src/errors/` for validation, server, and permission errors
 
@@ -73,6 +97,17 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - `DatabaseQuery`: MongoDB-style query interface with `$and`, `$or` support
 - `DatabaseListOptions`: Comprehensive options for row retrieval (pagination, sorting, filtering)
 - `DatabaseSaveMode`: Enum for save operations (SYNC | ASYNC)
+- `ChatChannelType`: Enum for chat types (Public, StaffToUser, PeerToPeer, Staff)
+- `ChatChannel`: Channel data structure (id, type, accesses, settings, unread counts, resolved)
+- `ChatMessage`: Message structure (channel, message, user, attaches, timestamps)
+- `ChatAttachment`: File/image attachment structure (type, attach, name)
+- `ChatListOptions`: Channel list filters (type, search, unreadedChats, pagination)
+- `ChatMessageListOptions`: Message list filters (search, pagination, sorting)
+- `ChatWebSocketOptions`: WebSocket configuration (appKey, authToken, reconnection settings)
+- `ChatWebSocketCallbacks`: Event handlers (onMessageReceived, onMessageDeleted, onConnectionStateChange)
+- `ConnectionState`: Enum for WebSocket states (Connecting, Connected, Disconnected, Error)
+- `WebSocketEvent`: Enum for real-time events (UpsertMessage, RemoveMessage, UpdateSupportCount, UpdateSupportChannel)
+- `PusherMessage`: Pusher protocol message structure (event, channel, data)
 - `ResponseData<T>` / `ResponseError`: Standardized API response types
 
 ### Build Configuration
@@ -85,4 +120,6 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - Default API URL: `https://api.emd.one`
 - HTTP client (`src/utils/fetch.ts`) wraps fetch with automatic JSON parsing and error handling
 - Response formatter (`src/utils/formatters.ts`) extracts data from API response structure
+- **Node.js requirement**: v22.0.0 or higher (for native WebSocket support)
+- **Browser support**: All modern browsers with native WebSocket API
 - Semantic Release automates NPM publishing on main branch pushes

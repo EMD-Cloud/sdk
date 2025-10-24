@@ -42,6 +42,26 @@
 		-   [Method: database.deleteRow](#method--databasedeleterow)
 		-   [Method: database.deleteRows](#method--databasedeleterows)
 		-   [Method: database.triggerButton](#method--databasetriggerbutton)
+	-   [Chat methods](#chat-methods)
+		-   [Method: chat.listChannels](#method--chatlistchannels)
+		-   [Method: chat.createChannelByType](#method--chatcreatechannelbytype)
+		-   [Method: chat.upsertChannel](#method--chatupsertchannel)
+		-   [Method: chat.getChannel](#method--chatgetchannel)
+		-   [Method: chat.deleteChannel](#method--chatdeletechannel)
+		-   [Method: chat.sendMessage](#method--chatsendmessage)
+		-   [Method: chat.listMessages](#method--chatlistmessages)
+		-   [Method: chat.deleteMessage](#method--chatdeletemessage)
+		-   [Method: chat.getUnreadCount](#method--chatgetunreadcount)
+	-   [Real-time Chat (WebSocket)](#real-time-chat-websocket)
+		-   [Creating a WebSocket instance](#creating-a-websocket-instance)
+		-   [Method: chatWs.connect](#method--chatwsconnect)
+		-   [Method: chatWs.disconnect](#method--chatwsdisconnect)
+		-   [Method: chatWs.subscribeToChannel](#method--chatwssubscribetochannel)
+		-   [Method: chatWs.unsubscribeFromChannel](#method--chatwsunsubscribefromchannel)
+		-   [Method: chatWs.subscribeToSupport](#method--chatwssubscribetosupport)
+		-   [Method: chatWs.setCallbacks](#method--chatwssetcallbacks)
+		-   [Method: chatWs.getConnectionState](#method--chatwsgetconnectionstate)
+		-   [Method: chatWs.getSubscribedChannels](#method--chatwsgetsubscribedchannels)
 -   [Conclusion](#conclusion)
 
 ## Overview
@@ -49,6 +69,11 @@
 The EMD Cloud SDK enables applications to interact with the [EMD Cloud](https://cloud.emd.one/) API. This library is designed to manage authentication and the configuration parameters necessary for the effective use of the EMD Cloud service.
 
 ## Get started
+
+**Requirements:**
+- Node.js v22.0.0 or higher (for native WebSocket support)
+
+**Setup:**
 
 1. Register on the EMD Cloud platform and create an application via the link - https://console.cloud.emd.one
 2. Get the API token of your application.
@@ -1077,6 +1102,694 @@ const result = await ordersDb.triggerButton(
   'approve-button-column-id',
   { authType: 'auth-token' }
 );
+```
+
+<br>
+<br>
+
+### Chat methods:
+
+The chat module provides both REST API methods for managing chat channels and messages, and WebSocket functionality for real-time messaging. Access REST API operations via `emdCloud.chat`.
+
+#### Method:  `chat.listChannels`
+
+**Description:**
+Lists chat channels with filtering and pagination support. You can filter by channel type, search content, and retrieve unread or long-pending chats.
+
+**Parameters:**
+
+-   `options` (object, optional): List options including:
+    -   `type` (ChatChannelType, optional): Filter by channel type (default: ChatChannelType.Public)
+    -   `search` (string, optional): Search in user names or chat content
+    -   `limit` (number, optional): Number of channels per page (default: 50)
+    -   `page` (number, optional): Page number, 0-indexed (default: 0)
+    -   `orderBy` (string, optional): Field to sort by (default: 'createdAt')
+    -   `sort` ('ASC'|'DESC', optional): Sort direction (default: 'DESC')
+    -   `unreadedChats` (boolean, optional): Show only unread chats
+    -   `longTimeAnswer` (boolean, optional): Show chats with long time since answer
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Channel list with pagination info (`{ data: ChatChannel[], count: number, pages: number }`)
+-   Server error
+
+**Notes:**
+The `ChatChannelType` enum must be imported: `import { ChatChannelType } from '@emd-cloud/sdk'`
+
+**Example:**
+```javascript
+import { ChatChannelType } from '@emd-cloud/sdk'
+
+// Get all public channels
+const channels = await emdCloud.chat.listChannels({
+  type: ChatChannelType.Public,
+  limit: 20,
+  page: 0
+});
+console.log(`Found ${channels.count} channels across ${channels.pages} pages`);
+
+// Get unread staff-to-user chats
+const unreadSupport = await emdCloud.chat.listChannels({
+  type: ChatChannelType.StaffToUser,
+  unreadedChats: true
+});
+```
+
+<br>
+
+#### Method:  `chat.createChannelByType`
+
+**Description:**
+Creates or retrieves an existing chat channel by type. This method is used to create staff-to-user support chats, peer-to-peer direct messages, or internal staff channels.
+
+**Parameters:**
+
+-   `type` (ChatChannelType): Channel type - must be `StaffToUser`, `PeerToPeer`, or `Staff`
+-   `options` (object, optional): Creation options including:
+    -   `userId` (string, optional): User ID for staff-to-user chats
+    -   `id` (string, optional): Custom channel ID
+    -   `accesses` (array, optional): Array of user UUIDs for peer-to-peer chats
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Created or existing channel (`ChatChannel`)
+-   Server error
+-   Validation error if type is invalid
+
+**Example:**
+```javascript
+import { ChatChannelType } from '@emd-cloud/sdk'
+
+// Create staff-to-user support chat
+const supportChannel = await emdCloud.chat.createChannelByType(
+  ChatChannelType.StaffToUser,
+  { userId: 'user-uuid-123' }
+);
+
+// Create peer-to-peer direct message
+const dmChannel = await emdCloud.chat.createChannelByType(
+  ChatChannelType.PeerToPeer,
+  { accesses: ['user-uuid-1', 'user-uuid-2'] }
+);
+
+// Create internal staff channel
+const staffChannel = await emdCloud.chat.createChannelByType(
+  ChatChannelType.Staff,
+  { id: 'team-alpha' }
+);
+```
+
+<br>
+
+#### Method:  `chat.upsertChannel`
+
+**Description:**
+Creates a new chat channel or updates an existing one. Include `_id` in the data to update an existing channel.
+
+**Parameters:**
+
+-   `data` (object): Channel data including:
+    -   `_id` (string, optional): Channel MongoDB ID (for updates)
+    -   `id` (string, optional): Custom channel identifier
+    -   `type` (ChatChannelType, optional): Channel type
+    -   `resolved` (boolean, optional): Whether support chat is resolved
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Created or updated channel (`ChatChannel`)
+-   Server error
+
+**Example:**
+```javascript
+import { ChatChannelType } from '@emd-cloud/sdk'
+
+// Create new public channel
+const newChannel = await emdCloud.chat.upsertChannel({
+  id: 'general-chat',
+  type: ChatChannelType.Public
+});
+
+// Update existing channel (mark support chat as resolved)
+const updated = await emdCloud.chat.upsertChannel({
+  _id: 'channel-mongo-id',
+  resolved: true
+});
+```
+
+<br>
+
+#### Method:  `chat.getChannel`
+
+**Description:**
+Retrieves detailed information about a specific chat channel, including participant access information.
+
+**Parameters:**
+
+-   `id` (string): Channel ID (not MongoDB _id)
+-   `options` (object, optional): Options including:
+    -   `cleanupUnreaded` (boolean, optional): Clear unread counts on fetch (default: true)
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Channel details (`ChatChannel`)
+-   Server error
+
+**Example:**
+```javascript
+// Get channel details
+const channel = await emdCloud.chat.getChannel('staff-to-user-user-uuid');
+console.log('Channel type:', channel.type);
+console.log('Unread messages:', channel.unreadCountRecipient);
+
+// Get channel without clearing unread count
+const channelPreview = await emdCloud.chat.getChannel('channel-id', {
+  cleanupUnreaded: false
+});
+```
+
+<br>
+
+#### Method:  `chat.deleteChannel`
+
+**Description:**
+Permanently deletes a chat channel and all its messages.
+
+**Parameters:**
+
+-   `channelId` (string): Channel MongoDB _id to delete
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Success status (`{ success: boolean }`)
+-   Server error
+
+**Example:**
+```javascript
+const result = await emdCloud.chat.deleteChannel('channel-mongo-id');
+if (result.success) {
+  console.log('Channel deleted successfully');
+}
+```
+
+<br>
+
+#### Method:  `chat.sendMessage`
+
+**Description:**
+Sends a message to a chat channel. Messages can include text content and/or up to 10 file attachments.
+
+**Parameters:**
+
+-   `channelId` (string): Channel ID to send message to
+-   `options` (object): Message options including:
+    -   `message` (string, optional): Message text content
+    -   `attaches` (array, optional): Array of attachments (max 10) with:
+        -   `type` (string): Attachment type (e.g., 'image', 'file')
+        -   `attach` (string): Attachment identifier/path
+        -   `name` (string, optional): Display name
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Created message (`ChatMessage`)
+-   Server error
+-   Validation error if neither message nor attachments provided, or if more than 10 attachments
+
+**Example:**
+```javascript
+// Send text message
+const message = await emdCloud.chat.sendMessage('channel-id', {
+  message: 'Hello, how can I help you today?'
+});
+
+// Send message with attachments
+const messageWithFiles = await emdCloud.chat.sendMessage('channel-id', {
+  message: 'Here are the requested documents',
+  attaches: [
+    { type: 'image', attach: 'image-id-123', name: 'screenshot.png' },
+    { type: 'file', attach: 'file-id-456', name: 'report.pdf' }
+  ]
+});
+```
+
+<br>
+
+#### Method:  `chat.listMessages`
+
+**Description:**
+Retrieves messages from a chat channel with pagination and search capabilities.
+
+**Parameters:**
+
+-   `channelId` (string): Channel ID to list messages from
+-   `options` (object, optional): List options including:
+    -   `search` (string, optional): Text search across messages
+    -   `limit` (number, optional): Number of messages per page (default: 50)
+    -   `page` (number, optional): Page number, 0-indexed (default: 0)
+    -   `orderBy` (string, optional): Field to sort by (default: 'createdAt')
+    -   `sort` ('ASC'|'DESC', optional): Sort direction (default: 'DESC')
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Message list with pagination (`{ data: ChatMessage[], count: number, pages: number }`)
+-   Server error
+
+**Example:**
+```javascript
+// Get recent messages (newest first)
+const messages = await emdCloud.chat.listMessages('channel-id', {
+  limit: 50,
+  page: 0,
+  orderBy: 'createdAt',
+  sort: 'DESC'
+});
+console.log(`Found ${messages.count} messages`);
+
+// Search messages
+const searchResults = await emdCloud.chat.listMessages('channel-id', {
+  search: 'order status',
+  limit: 20
+});
+```
+
+<br>
+
+#### Method:  `chat.deleteMessage`
+
+**Description:**
+Deletes a specific message from a chat channel.
+
+**Parameters:**
+
+-   `channelId` (string): Channel ID containing the message
+-   `messageId` (string): Message MongoDB _id to delete
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Success status (`{ success: boolean }`)
+-   Server error
+
+**Example:**
+```javascript
+const result = await emdCloud.chat.deleteMessage('channel-id', 'message-mongo-id');
+if (result.success) {
+  console.log('Message deleted successfully');
+}
+```
+
+<br>
+
+#### Method:  `chat.getUnreadCount`
+
+**Description:**
+Gets the unread message count for a staff-to-user chat channel. Returns separate counts for the chat creator (staff) and recipient (user).
+
+**Parameters:**
+
+-   `channelId` (string): Channel ID
+-   `options` (object, optional): Options including:
+    -   `cleanupUnreaded` (boolean, optional): Clear unread counts on fetch (default: false)
+
+**Returns:**
+
+Returns a `Promise` that resolves to one of the following:
+
+-   Unread counts (`{ creator: number, recipient: number }`)
+-   Server error
+
+**Example:**
+```javascript
+const counts = await emdCloud.chat.getUnreadCount('channel-id');
+console.log(`Staff unread: ${counts.creator}, User unread: ${counts.recipient}`);
+
+// Get counts and mark as read
+const clearedCounts = await emdCloud.chat.getUnreadCount('channel-id', {
+  cleanupUnreaded: true
+});
+```
+
+<br>
+<br>
+
+### Real-time Chat (WebSocket):
+
+The ChatWebSocket class provides real-time messaging capabilities using the native WebSocket API with Pusher protocol compatibility. Create WebSocket instances via `emdCloud.chatWebSocket()`.
+
+#### Creating a WebSocket instance
+
+To enable real-time chat updates, create a WebSocket instance with optional configuration:
+
+```javascript
+import { ConnectionState } from '@emd-cloud/sdk'
+
+// Basic WebSocket instance
+const chatWs = emdCloud.chatWebSocket();
+
+// WebSocket with configuration and callbacks
+const chatWs = emdCloud.chatWebSocket({
+  autoReconnect: true,
+  maxReconnectAttempts: -1, // -1 = infinite
+  reconnectDelay: 1000,
+  maxReconnectDelay: 30000,
+  pingInterval: 30000,
+  callbacks: {
+    onMessageReceived: (message) => {
+      console.log('New message:', message);
+    },
+    onConnectionStateChange: (state) => {
+      console.log('Connection state:', state);
+    },
+    onError: (error) => {
+      console.error('WebSocket error:', error);
+    }
+  }
+});
+```
+
+#### Key Features
+
+- **Native WebSocket API**: Uses browser and Node.js v22+ native WebSocket (zero external dependencies)
+- **JWS Authentication**: Channels authenticated using JWT tokens from SDK configuration
+- **Auto-reconnection**: Exponential backoff strategy (1s → 30s max delay) with configurable retry limits
+- **Ping/Pong Keepalive**: Automatic 30-second ping intervals to maintain connection
+- **Event Callbacks**: Real-time notifications for messages, deletions, support updates, and connection changes
+- **Connection States**: Track connection status (`connecting`, `connected`, `disconnected`, `error`)
+
+<br>
+
+#### Method:  `chatWs.connect`
+
+**Description:**
+Establishes a WebSocket connection to the EMD Cloud chat server. The connection uses the `websocketUrl` configured in the SDK options.
+
+**Returns:**
+
+Returns a `Promise` that resolves when the connection is successfully established.
+
+**Notes:**
+- Authentication token must be set before connecting
+- Connection state changes are reported via `onConnectionStateChange` callback
+- On successful connection, the `ConnectionEstablished` event triggers automatic ping/pong keepalive
+
+**Example:**
+```javascript
+try {
+  await chatWs.connect();
+  console.log('Connected to chat server');
+} catch (error) {
+  console.error('Connection failed:', error);
+}
+```
+
+<br>
+
+#### Method:  `chatWs.disconnect`
+
+**Description:**
+Closes the WebSocket connection and cleans up all resources including timers and subscriptions.
+
+**Notes:**
+- Stops automatic reconnection attempts
+- Clears ping/pong keepalive timers
+- Removes all channel subscriptions
+- Sets connection state to `Disconnected`
+
+**Example:**
+```javascript
+chatWs.disconnect();
+console.log('Disconnected from chat server');
+```
+
+<br>
+
+#### Method:  `chatWs.subscribeToChannel`
+
+**Description:**
+Subscribes to a chat channel to receive real-time message updates. The subscription uses JWS authentication generated from the SDK's auth token.
+
+**Parameters:**
+
+-   `channelId` (string): Chat channel ID to subscribe to
+-   `chatId` (string, optional): Optional chat ID for authentication context
+
+**Returns:**
+
+Returns a `Promise` that resolves when subscription succeeds, rejects on error or timeout (10 seconds).
+
+**Notes:**
+- Must be connected before subscribing
+- Channel name is automatically prefixed with `chat-`
+- Duplicate subscriptions are ignored (returns immediately)
+- Authentication is handled automatically using SDK configuration
+
+**Example:**
+```javascript
+try {
+  await chatWs.connect();
+  await chatWs.subscribeToChannel('channel-id-123');
+  console.log('Subscribed to channel');
+} catch (error) {
+  console.error('Subscription failed:', error);
+}
+
+// Subscribe with chat ID for authentication
+await chatWs.subscribeToChannel('support-channel', 'chat-mongo-id');
+```
+
+<br>
+
+#### Method:  `chatWs.unsubscribeFromChannel`
+
+**Description:**
+Unsubscribes from a chat channel, stopping real-time message updates for that channel.
+
+**Parameters:**
+
+-   `channelId` (string): Chat channel ID to unsubscribe from
+
+**Notes:**
+- If not currently subscribed to the channel, this is a no-op
+- Channel name is automatically prefixed with `chat-`
+
+**Example:**
+```javascript
+chatWs.unsubscribeFromChannel('channel-id-123');
+console.log('Unsubscribed from channel');
+```
+
+<br>
+
+#### Method:  `chatWs.subscribeToSupport`
+
+**Description:**
+Subscribes to the special support channel (`private-space`) to receive real-time support chat updates. This is typically used by staff members to monitor all support conversations.
+
+**Returns:**
+
+Returns a `Promise` that resolves when subscription succeeds, rejects on timeout.
+
+**Notes:**
+- Must be connected before subscribing
+- Requires staff permissions to successfully subscribe
+- Receives `UpdateSupportCount` and `UpdateSupportChannel` events
+
+**Example:**
+```javascript
+try {
+  await chatWs.connect();
+  await chatWs.subscribeToSupport();
+  console.log('Subscribed to support updates');
+} catch (error) {
+  console.error('Support subscription failed:', error);
+}
+```
+
+<br>
+
+#### Method:  `chatWs.setCallbacks`
+
+**Description:**
+Sets or updates event callbacks for WebSocket events. New callbacks are merged with existing ones.
+
+**Parameters:**
+
+-   `callbacks` (object): Event callbacks including:
+    -   `onMessageReceived` (function, optional): Called when a new message arrives `(message: ChatMessage) => void`
+    -   `onMessageDeleted` (function, optional): Called when a message is deleted `(data: { _id: string, channel: string }) => void`
+    -   `onSupportCountUpdated` (function, optional): Called when support unread count changes `(data: { count: number }) => void`
+    -   `onSupportChannelUpdated` (function, optional): Called when a support channel updates `(channel: ChatChannel) => void`
+    -   `onConnectionStateChange` (function, optional): Called on connection state changes `(state: ConnectionState) => void`
+    -   `onError` (function, optional): Called on any error `(error: Error) => void`
+
+**Example:**
+```javascript
+chatWs.setCallbacks({
+  onMessageReceived: (message) => {
+    console.log('New message from', message.user);
+    console.log('Content:', message.message);
+
+    // Update UI with new message
+    addMessageToUI(message);
+  },
+  onMessageDeleted: (data) => {
+    console.log('Message deleted:', data._id);
+    removeMessageFromUI(data._id);
+  },
+  onConnectionStateChange: (state) => {
+    if (state === ConnectionState.Connected) {
+      console.log('Connected!');
+    } else if (state === ConnectionState.Disconnected) {
+      console.log('Disconnected');
+    }
+  }
+});
+```
+
+<br>
+
+#### Method:  `chatWs.getConnectionState`
+
+**Description:**
+Returns the current WebSocket connection state.
+
+**Returns:**
+
+Returns the current `ConnectionState` enum value:
+- `ConnectionState.Connecting` - Attempting to connect
+- `ConnectionState.Connected` - Successfully connected
+- `ConnectionState.Disconnected` - Not connected
+- `ConnectionState.Error` - Connection error occurred
+
+**Example:**
+```javascript
+import { ConnectionState } from '@emd-cloud/sdk'
+
+const state = chatWs.getConnectionState();
+if (state === ConnectionState.Connected) {
+  console.log('WebSocket is connected');
+} else {
+  console.log('WebSocket is not connected');
+}
+```
+
+<br>
+
+#### Method:  `chatWs.getSubscribedChannels`
+
+**Description:**
+Returns a set of all currently subscribed channel names.
+
+**Returns:**
+
+Returns a `Set<string>` containing subscribed channel names (including the `chat-` prefix).
+
+**Example:**
+```javascript
+const channels = chatWs.getSubscribedChannels();
+console.log('Subscribed to channels:', Array.from(channels));
+// Output: ['chat-channel-1', 'chat-channel-2', 'private-space']
+```
+
+<br>
+
+#### Complete WebSocket Example
+
+Here's a complete example showing WebSocket setup and usage:
+
+```javascript
+import { EmdCloud, AppEnvironment, ConnectionState, ChatChannelType } from '@emd-cloud/sdk'
+
+// Initialize SDK
+const emdCloud = new EmdCloud({
+  environment: AppEnvironment.Client,
+  appId: 'your-app-id'
+});
+
+// Set auth token (from login)
+emdCloud.setAuthToken('user-auth-token');
+
+// Create WebSocket instance with callbacks
+const chatWs = emdCloud.chatWebSocket({
+  autoReconnect: true,
+  callbacks: {
+    onMessageReceived: (message) => {
+      console.log(`[${message.channel}] ${message.user}: ${message.message}`);
+      updateChatUI(message);
+    },
+    onMessageDeleted: ({ _id, channel }) => {
+      console.log(`Message ${_id} deleted from ${channel}`);
+      removeMessageFromUI(_id);
+    },
+    onConnectionStateChange: (state) => {
+      if (state === ConnectionState.Connected) {
+        console.log('✓ Connected to chat');
+      } else if (state === ConnectionState.Error) {
+        console.log('✗ Connection error');
+      }
+    },
+    onError: (error) => {
+      console.error('WebSocket error:', error.message);
+    }
+  }
+});
+
+// Connect and subscribe
+async function startChat() {
+  try {
+    // Establish WebSocket connection
+    await chatWs.connect();
+
+    // Get user's channels
+    const channels = await emdCloud.chat.listChannels({
+      type: ChatChannelType.StaffToUser,
+      limit: 10
+    });
+
+    // Subscribe to all user channels
+    for (const channel of channels.data) {
+      await chatWs.subscribeToChannel(channel.id);
+      console.log(`Subscribed to ${channel.id}`);
+    }
+
+    // For staff: subscribe to support updates
+    if (isStaff) {
+      await chatWs.subscribeToSupport();
+    }
+  } catch (error) {
+    console.error('Failed to start chat:', error);
+  }
+}
+
+// Send a message
+async function sendChatMessage(channelId, text) {
+  const message = await emdCloud.chat.sendMessage(channelId, {
+    message: text
+  });
+  console.log('Message sent:', message._id);
+}
+
+// Cleanup on app close
+function cleanup() {
+  chatWs.disconnect();
+}
+
+// Start the chat
+startChat();
 ```
 
 <br>

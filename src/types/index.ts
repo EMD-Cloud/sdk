@@ -1,4 +1,5 @@
 // Re-export all types for external consumption
+export * from './chat'
 export * from './common'
 export * from './database'
 export * from './fetch'

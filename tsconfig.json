@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "target": "es2018",
+    "lib": ["es2018", "dom"],
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,

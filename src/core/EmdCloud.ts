@@ -5,12 +5,15 @@ import { Auth, UserInteraction } from 'src/user'
 import { Webhook } from 'src/webhook'
 import { Database } from 'src/database'
 import { Uploader } from 'src/uploader'
+import { Chat, ChatWebSocket } from 'src/chat'
+import type { ChatWebSocketOptions } from 'src/types/chat'
 
 class EmdCloud {
   public auth: Auth
   public user: UserInteraction
   public webhook: Webhook
   public uploader: Uploader
+  public chat: Chat
   public setAuthToken: AppOptions['setAuthToken']
   private readonly applicationOptions: AppOptions
 
@@ -52,6 +55,7 @@ class EmdCloud {
     this.user = new UserInteraction(this.applicationOptions)
     this.webhook = new Webhook(this.applicationOptions)
     this.uploader = new Uploader(this.applicationOptions)
+    this.chat = new Chat(this.applicationOptions)
     this.setAuthToken = this.applicationOptions.setAuthToken.bind(
       this.applicationOptions,
     )
@@ -68,6 +72,24 @@ class EmdCloud {
    */
   database(collectionId: string): Database {
     return new Database(this.applicationOptions, collectionId)
+  }
+
+  /**
+   * Creates a chat WebSocket instance for real-time messaging.
+   * Use this to establish a WebSocket connection and subscribe to chat channels.
+   *
+   * @param {Partial<ChatWebSocketOptions>} options - Optional WebSocket configuration
+   * @returns {ChatWebSocket} A WebSocket instance for real-time chat
+   * @example
+   * const chatWs = emdCloud.chatWebSocket();
+   * await chatWs.connect();
+   * await chatWs.subscribeToChannel('channel-id');
+   * chatWs.setCallbacks({
+   *   onMessageReceived: (message) => console.log('New message:', message)
+   * });
+   */
+  chatWebSocket(options?: Partial<ChatWebSocketOptions>): ChatWebSocket {
+    return new ChatWebSocket(this.applicationOptions, options)
   }
 }
 

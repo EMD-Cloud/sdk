@@ -6,6 +6,7 @@ export enum AppEnvironment {
 export interface AppOptionsType {
   environment: AppEnvironment
   apiUrl?: string
+  websocketUrl?: string
   appId: string
   authSchema?: string
   headerApiTokenKey?: string
