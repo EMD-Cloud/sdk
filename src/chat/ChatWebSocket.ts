@@ -57,7 +57,7 @@ export class ChatWebSocket {
    * @returns Promise that resolves when connected
    */
   async connect(): Promise<void> {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.ws?.readyState === WebSocket.CONNECTING || this.ws?.readyState === WebSocket.OPEN) {
       return Promise.resolve()
     }
 
@@ -161,6 +161,13 @@ export class ChatWebSocket {
       try {
         // Generate authentication for the channel
         const auth = this.chatAuth.generateChannelAuth(chatId)
+
+        this.sendMessage({
+          event: WebSocketEvent.SignIn,
+          data: {
+            ...auth,
+          }
+        })
 
         // Send subscription request
         this.sendMessage({

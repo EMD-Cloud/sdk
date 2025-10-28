@@ -46,6 +46,8 @@ export enum WebSocketEvent {
   Pong = 'pusher:pong',
   /** Pusher error event */
   Error = 'pusher:error',
+  /** Authorization (client → server)  */
+  SignIn = 'pusher:signin',
   /** Subscription error */
   SubscriptionError = 'pusher:subscription_error',
   /** Subscribe to channel (client → server) */
