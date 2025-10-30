@@ -192,6 +192,7 @@ export interface ChatListOptions extends CallOptions {
  * Response for channel list
  */
 export interface ChatListResponse {
+  success: true
   data: ChatChannel[]
   count: number
   pages: number
@@ -251,6 +252,7 @@ export interface ChatMessageListOptions extends CallOptions {
  * Response for message list
  */
 export interface ChatMessageListResponse {
+  success: true
   data: ChatMessage[]
   count: number
   pages: number
@@ -275,11 +277,43 @@ export interface GetUnreadCountOptions extends CallOptions {
 }
 
 /**
- * Unread count response (for staff-to-user chats)
+ * Unread count data (for staff-to-user chats)
  */
-export interface UnreadCountResponse {
+export interface UnreadCountData {
   creator: number
   recipient: number
+}
+
+/**
+ * Unread count response wrapper
+ */
+export interface UnreadCountResponse {
+  success: true
+  data: UnreadCountData
+}
+
+/**
+ * Response wrapper for single channel operations
+ */
+export interface ChatChannelResponse {
+  success: true
+  data: ChatChannel
+}
+
+/**
+ * Response wrapper for single message operations
+ */
+export interface ChatMessageResponse {
+  success: true
+  data: ChatMessage
+}
+
+/**
+ * Response wrapper for delete operations
+ */
+export interface ChatDeleteResponse {
+  success: true
+  data: { success: boolean }
 }
 
 /**

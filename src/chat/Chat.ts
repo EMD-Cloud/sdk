@@ -1,9 +1,11 @@
 import AppOptions from 'src/core/AppOptions'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
+import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
 import { ChatChannelType } from 'src/types/chat'
+import type { CallOptions } from 'src/types/common'
 import type {
   ChatChannel,
   ChatMessage,
@@ -17,6 +19,9 @@ import type {
   SendMessageOptions,
   GetUnreadCountOptions,
   UnreadCountResponse,
+  ChatChannelResponse,
+  ChatMessageResponse,
+  ChatDeleteResponse,
 } from 'src/types/chat'
 
 /**
@@ -33,6 +38,7 @@ class Chat {
    * List chat channels with filtering and pagination
    *
    * @param options - List options including filters and pagination
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to channel list with pagination info
    *
    * @example
@@ -46,9 +52,33 @@ class Chat {
    * });
    */
   async listChannels(
+    options: ChatListOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatListResponse | ServerError>
+  async listChannels(
+    options?: ChatListOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatListResponse['data'] | ServerError>
+  async listChannels(
     options: ChatListOptions = {},
-  ): Promise<ChatListResponse | ServerError | ValidationError> {
+    callOptions: CallOptions = {},
+  ): Promise<ChatListResponse | ChatListResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const {
       type = ChatChannelType.Public,
@@ -76,8 +106,6 @@ class Chat {
     if (longTimeAnswer !== undefined)
       params.append('longTimeAnswer', longTimeAnswer.toString())
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
-
     const res = await apiRequest(
       `${apiUrl}/api/${app}/chat/?${params.toString()}`,
       {
@@ -87,9 +115,11 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as ChatListResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatListResponse
+    }
 
-    return data
+    return responseFormatter(res) as ChatListResponse['data']
   }
 
   /**
@@ -97,6 +127,7 @@ class Chat {
    *
    * @param type - Channel type (staff-to-user, peer-to-peer, staff)
    * @param options - Options including userId or accesses list
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to the channel
    *
    * @example
@@ -112,8 +143,19 @@ class Chat {
    */
   async createChannelByType(
     type: ChatChannelType,
+    options: CreateChannelByTypeOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatChannelResponse | ServerError>
+  async createChannelByType(
+    type: ChatChannelType,
+    options?: CreateChannelByTypeOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatChannelResponse['data'] | ServerError>
+  async createChannelByType(
+    type: ChatChannelType,
     options: CreateChannelByTypeOptions = {},
-  ): Promise<ChatChannel | ServerError | ValidationError> {
+    callOptions: CallOptions = {},
+  ): Promise<ChatChannelResponse | ChatChannelResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     if (
@@ -126,7 +168,20 @@ class Chat {
       )
     }
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const body: any = {}
     if (options.userId) body.userId = options.userId
@@ -145,15 +200,18 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as ChatChannel
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatChannelResponse
+    }
 
-    return data
+    return responseFormatter(res) as ChatChannel
   }
 
   /**
    * Create or update a chat channel
    *
    * @param data - Channel data (include _id to update)
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to the channel
    *
    * @example
@@ -171,10 +229,32 @@ class Chat {
    */
   async upsertChannel(
     data: UpsertChannelOptions,
-  ): Promise<ChatChannel | ServerError | ValidationError> {
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatChannelResponse | ServerError>
+  async upsertChannel(
+    data: UpsertChannelOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatChannelResponse['data'] | ServerError>
+  async upsertChannel(
+    data: UpsertChannelOptions,
+    callOptions: CallOptions = {},
+  ): Promise<ChatChannelResponse | ChatChannelResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const res = await apiRequest(`${apiUrl}/api/${app}/chat/`, {
       method: 'PUT',
@@ -185,9 +265,11 @@ class Chat {
       body: JSON.stringify(data),
     })
 
-    const result = responseFormatter(res) as ChatChannel
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatChannelResponse
+    }
 
-    return result
+    return responseFormatter(res) as ChatChannel
   }
 
   /**
@@ -195,6 +277,7 @@ class Chat {
    *
    * @param id - Channel ID
    * @param options - Options including cleanupUnreaded flag
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to the channel details
    *
    * @example
@@ -202,17 +285,41 @@ class Chat {
    */
   async getChannel(
     id: string,
+    options: GetChannelOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatChannelResponse | ServerError>
+  async getChannel(
+    id: string,
+    options?: GetChannelOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatChannelResponse['data'] | ServerError>
+  async getChannel(
+    id: string,
     options: GetChannelOptions = {},
-  ): Promise<ChatChannel | ServerError | ValidationError> {
+    callOptions: CallOptions = {},
+  ): Promise<ChatChannelResponse | ChatChannelResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const { cleanupUnreaded = true } = options
 
     const params = new URLSearchParams({
       cleanupUnreaded: cleanupUnreaded.toString(),
     })
-
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/chat/${id}/?${params.toString()}`,
@@ -223,15 +330,18 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as ChatChannel
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatChannelResponse
+    }
 
-    return data
+    return responseFormatter(res) as ChatChannel
   }
 
   /**
    * Delete a chat channel
    *
    * @param channelId - Channel _id to delete
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to success status
    *
    * @example
@@ -239,10 +349,32 @@ class Chat {
    */
   async deleteChannel(
     channelId: string,
-  ): Promise<{ success: boolean } | ServerError | ValidationError> {
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatDeleteResponse | ServerError>
+  async deleteChannel(
+    channelId: string,
+    callOptions?: CallOptions,
+  ): Promise<ChatDeleteResponse['data'] | ServerError>
+  async deleteChannel(
+    channelId: string,
+    callOptions: CallOptions = {},
+  ): Promise<ChatDeleteResponse | ChatDeleteResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const res = await apiRequest(`${apiUrl}/api/${app}/chat/`, {
       method: 'DELETE',
@@ -253,9 +385,11 @@ class Chat {
       body: JSON.stringify({ _id: channelId }),
     })
 
-    const data = responseFormatter(res) as { success: boolean }
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatDeleteResponse
+    }
 
-    return data
+    return responseFormatter(res) as { success: boolean }
   }
 
   /**
@@ -263,6 +397,7 @@ class Chat {
    *
    * @param channelId - Channel ID to send message to
    * @param options - Message options including text and attachments
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to the created message
    *
    * @example
@@ -283,7 +418,18 @@ class Chat {
   async sendMessage(
     channelId: string,
     options: SendMessageOptions,
-  ): Promise<ChatMessage | ServerError | ValidationError> {
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatMessageResponse | ServerError>
+  async sendMessage(
+    channelId: string,
+    options: SendMessageOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatMessageResponse['data'] | ServerError>
+  async sendMessage(
+    channelId: string,
+    options: SendMessageOptions,
+    callOptions: CallOptions = {},
+  ): Promise<ChatMessageResponse | ChatMessageResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     if (!options.message && !options.attaches?.length) {
@@ -294,7 +440,20 @@ class Chat {
       throw new ValidationError('Maximum 10 attachments allowed')
     }
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const body: any = {}
     if (options.message) body.message = options.message
@@ -312,9 +471,11 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as ChatMessage
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatMessageResponse
+    }
 
-    return data
+    return responseFormatter(res) as ChatMessage
   }
 
   /**
@@ -322,6 +483,7 @@ class Chat {
    *
    * @param channelId - Channel ID
    * @param options - List options including search and pagination
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to message list with pagination info
    *
    * @example
@@ -340,9 +502,35 @@ class Chat {
    */
   async listMessages(
     channelId: string,
+    options: ChatMessageListOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatMessageListResponse | ServerError>
+  async listMessages(
+    channelId: string,
+    options?: ChatMessageListOptions,
+    callOptions?: CallOptions,
+  ): Promise<ChatMessageListResponse['data'] | ServerError>
+  async listMessages(
+    channelId: string,
     options: ChatMessageListOptions = {},
-  ): Promise<ChatMessageListResponse | ServerError | ValidationError> {
+    callOptions: CallOptions = {},
+  ): Promise<ChatMessageListResponse | ChatMessageListResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const {
       search = '',
@@ -361,8 +549,6 @@ class Chat {
 
     if (search) params.append('search', search)
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
-
     const res = await apiRequest(
       `${apiUrl}/api/${app}/chat/${channelId}/message/?${params.toString()}`,
       {
@@ -372,9 +558,11 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as ChatMessageListResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatMessageListResponse
+    }
 
-    return data
+    return responseFormatter(res) as ChatMessageListResponse['data']
   }
 
   /**
@@ -382,6 +570,7 @@ class Chat {
    *
    * @param channelId - Channel ID
    * @param messageId - Message _id to delete
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to success status
    *
    * @example
@@ -390,10 +579,34 @@ class Chat {
   async deleteMessage(
     channelId: string,
     messageId: string,
-  ): Promise<{ success: boolean } | ServerError | ValidationError> {
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ChatDeleteResponse | ServerError>
+  async deleteMessage(
+    channelId: string,
+    messageId: string,
+    callOptions?: CallOptions,
+  ): Promise<ChatDeleteResponse['data'] | ServerError>
+  async deleteMessage(
+    channelId: string,
+    messageId: string,
+    callOptions: CallOptions = {},
+  ): Promise<ChatDeleteResponse | ChatDeleteResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/chat/${channelId}/message/`,
@@ -407,9 +620,11 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as { success: boolean }
+    if (callOptions.ignoreFormatResponse) {
+      return res as ChatDeleteResponse
+    }
 
-    return data
+    return responseFormatter(res) as { success: boolean }
   }
 
   /**
@@ -417,6 +632,7 @@ class Chat {
    *
    * @param channelId - Channel ID
    * @param options - Options including cleanupUnreaded flag
+   * @param callOptions - Additional options for the API call including authentication type
    * @returns Promise resolving to unread counts for creator and recipient
    *
    * @example
@@ -425,17 +641,41 @@ class Chat {
    */
   async getUnreadCount(
     channelId: string,
+    options: GetUnreadCountOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<UnreadCountResponse | ServerError>
+  async getUnreadCount(
+    channelId: string,
+    options?: GetUnreadCountOptions,
+    callOptions?: CallOptions,
+  ): Promise<UnreadCountResponse['data'] | ServerError>
+  async getUnreadCount(
+    channelId: string,
     options: GetUnreadCountOptions = {},
-  ): Promise<UnreadCountResponse | ServerError | ValidationError> {
+    callOptions: CallOptions = {},
+  ): Promise<UnreadCountResponse | UnreadCountResponse['data'] | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
+
+    let authHeaders: Record<string, string> = {}
+
+    try {
+      authHeaders = this.applicationOptions.getAuthorizationHeader(
+        callOptions.authType,
+      )
+    } catch (error) {
+      if (
+        !(error instanceof ValidationError) &&
+        !(error instanceof NotAllowedError)
+      ) {
+        throw error
+      }
+    }
 
     const { cleanupUnreaded = false } = options
 
     const params = new URLSearchParams({
       cleanupUnreaded: cleanupUnreaded.toString(),
     })
-
-    const authHeaders = this.applicationOptions.getAuthorizationHeader()
 
     const res = await apiRequest(
       `${apiUrl}/api/${app}/chat/${channelId}/message/unread-count/?${params.toString()}`,
@@ -446,9 +686,11 @@ class Chat {
       },
     )
 
-    const data = responseFormatter(res) as UnreadCountResponse
+    if (callOptions.ignoreFormatResponse) {
+      return res as UnreadCountResponse
+    }
 
-    return data
+    return responseFormatter(res) as UnreadCountResponse['data']
   }
 }
 
