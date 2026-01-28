@@ -277,11 +277,14 @@ export interface GetUnreadCountOptions extends CallOptions {
 }
 
 /**
- * Unread count data (for staff-to-user chats)
+ * Unread count data
+ *
+ * Returns a single count based on the requesting user's role:
+ * - For staff-to-user chats: staff sees unread from user, user sees unread from staff
+ * - For other channel types: count of messages since last read
  */
 export interface UnreadCountData {
-  creator: number
-  recipient: number
+  count: number
 }
 
 /**

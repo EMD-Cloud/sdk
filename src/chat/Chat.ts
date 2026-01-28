@@ -628,16 +628,22 @@ class Chat {
   }
 
   /**
-   * Get unread message count for a channel (staff-to-user chats)
+   * Get unread message count for a channel
+   *
+   * For staff-to-user chats, returns the count relevant to the requesting user:
+   * - Staff sees unread messages from user (unreadCountCreator)
+   * - User sees unread messages from staff (unreadCountRecipient)
+   *
+   * For other channel types, returns count of messages since last read.
    *
    * @param channelId - Channel ID
    * @param options - Options including cleanupUnreaded flag
    * @param callOptions - Additional options for the API call including authentication type
-   * @returns Promise resolving to unread counts for creator and recipient
+   * @returns Promise resolving to unread count for the requesting user
    *
    * @example
-   * const counts = await chat.getUnreadCount('channel-id');
-   * console.log(`Creator: ${counts.creator}, Recipient: ${counts.recipient}`);
+   * const { count } = await chat.getUnreadCount('channel-id');
+   * console.log(`Unread messages: ${count}`);
    */
   async getUnreadCount(
     channelId: string,
