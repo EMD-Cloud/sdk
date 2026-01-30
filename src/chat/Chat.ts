@@ -1,9 +1,7 @@
-import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
 import { NotAllowedError } from 'src/errors/NotAllowedError'
-import { apiRequest } from 'src/utils/fetch'
-import { responseFormatter } from 'src/utils/formatters'
 import { ChatChannelType } from 'src/types/chat'
 import type { CallOptions } from 'src/types/common'
 import type {
@@ -27,13 +25,7 @@ import type {
 /**
  * Chat module for managing chat channels and messages via REST API
  */
-class Chat {
-  private applicationOptions: AppOptions
-
-  constructor(applicationOptions: AppOptions) {
-    this.applicationOptions = applicationOptions
-  }
-
+class Chat extends BaseModule {
   /**
    * List chat channels with filtering and pagination
    *
@@ -106,20 +98,15 @@ class Chat {
     if (longTimeAnswer !== undefined)
       params.append('longTimeAnswer', longTimeAnswer.toString())
 
-    const res = await apiRequest(
+    return this.request<ChatListResponse>(
       `${apiUrl}/api/${app}/chat/?${params.toString()}`,
       {
         method: 'GET',
         headers: { ...authHeaders },
         body: null,
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatListResponse
-    }
-
-    return responseFormatter(res) as ChatListResponse['data']
   }
 
   /**
@@ -188,7 +175,7 @@ class Chat {
     if (options.id) body.id = options.id
     if (options.accesses) body.accesses = options.accesses
 
-    const res = await apiRequest(
+    return this.request<ChatChannelResponse>(
       `${apiUrl}/api/${app}/chat/${type}`,
       {
         method: 'POST',
@@ -198,13 +185,8 @@ class Chat {
         },
         body: JSON.stringify(body),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatChannelResponse
-    }
-
-    return responseFormatter(res) as ChatChannel
   }
 
   /**
@@ -256,20 +238,18 @@ class Chat {
       }
     }
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/chat/`, {
-      method: 'PUT',
-      headers: {
-        ...authHeaders,
-        'Content-Type': 'application/json',
+    return this.request<ChatChannelResponse>(
+      `${apiUrl}/api/${app}/chat/`,
+      {
+        method: 'PUT',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       },
-      body: JSON.stringify(data),
-    })
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatChannelResponse
-    }
-
-    return responseFormatter(res) as ChatChannel
+      callOptions,
+    )
   }
 
   /**
@@ -321,20 +301,15 @@ class Chat {
       cleanupUnreaded: cleanupUnreaded.toString(),
     })
 
-    const res = await apiRequest(
+    return this.request<ChatChannelResponse>(
       `${apiUrl}/api/${app}/chat/${id}/?${params.toString()}`,
       {
         method: 'GET',
         headers: { ...authHeaders },
         body: null,
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatChannelResponse
-    }
-
-    return responseFormatter(res) as ChatChannel
   }
 
   /**
@@ -376,20 +351,18 @@ class Chat {
       }
     }
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/chat/`, {
-      method: 'DELETE',
-      headers: {
-        ...authHeaders,
-        'Content-Type': 'application/json',
+    return this.request<ChatDeleteResponse>(
+      `${apiUrl}/api/${app}/chat/`,
+      {
+        method: 'DELETE',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ _id: channelId }),
       },
-      body: JSON.stringify({ _id: channelId }),
-    })
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatDeleteResponse
-    }
-
-    return responseFormatter(res) as { success: boolean }
+      callOptions,
+    )
   }
 
   /**
@@ -459,7 +432,7 @@ class Chat {
     if (options.message) body.message = options.message
     if (options.attaches) body.attaches = options.attaches
 
-    const res = await apiRequest(
+    return this.request<ChatMessageResponse>(
       `${apiUrl}/api/${app}/chat/${channelId}/message/`,
       {
         method: 'PUT',
@@ -469,13 +442,8 @@ class Chat {
         },
         body: JSON.stringify(body),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatMessageResponse
-    }
-
-    return responseFormatter(res) as ChatMessage
   }
 
   /**
@@ -549,20 +517,15 @@ class Chat {
 
     if (search) params.append('search', search)
 
-    const res = await apiRequest(
+    return this.request<ChatMessageListResponse>(
       `${apiUrl}/api/${app}/chat/${channelId}/message/?${params.toString()}`,
       {
         method: 'GET',
         headers: { ...authHeaders },
         body: null,
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatMessageListResponse
-    }
-
-    return responseFormatter(res) as ChatMessageListResponse['data']
   }
 
   /**
@@ -608,7 +571,7 @@ class Chat {
       }
     }
 
-    const res = await apiRequest(
+    return this.request<ChatDeleteResponse>(
       `${apiUrl}/api/${app}/chat/${channelId}/message/`,
       {
         method: 'DELETE',
@@ -618,13 +581,8 @@ class Chat {
         },
         body: JSON.stringify({ _id: messageId }),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as ChatDeleteResponse
-    }
-
-    return responseFormatter(res) as { success: boolean }
   }
 
   /**
@@ -683,20 +641,15 @@ class Chat {
       cleanupUnreaded: cleanupUnreaded.toString(),
     })
 
-    const res = await apiRequest(
+    return this.request<UnreadCountResponse>(
       `${apiUrl}/api/${app}/chat/${channelId}/message/unread-count/?${params.toString()}`,
       {
         method: 'GET',
         headers: { ...authHeaders },
         body: null,
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as UnreadCountResponse
-    }
-
-    return responseFormatter(res) as UnreadCountResponse['data']
   }
 }
 

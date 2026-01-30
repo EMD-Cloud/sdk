@@ -1,4 +1,4 @@
-import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
 import type {
@@ -6,18 +6,15 @@ import type {
   SocialAttachResponse,
   UserListOptions,
   UserListResponse,
+  AuthUserResponse,
+  SocialAttachRawResponse,
+  SimpleSuccessResponse,
+  UserListRawResponse,
 } from 'src/types/user'
 import { SocialProvider } from '../types'
-import { apiRequest } from 'src/utils/fetch'
-import { responseFormatter } from 'src/utils/formatters'
+import type { CallOptions } from 'src/types/common'
 
-class UserInteraction {
-  private applicationOptions: AppOptions
-
-  constructor(applicationOptions: AppOptions) {
-    this.applicationOptions = applicationOptions
-  }
-
+class UserInteraction extends BaseModule {
   /**
    * Initiates the process to attach a social network account to the current user.
    *
@@ -28,6 +25,7 @@ class UserInteraction {
    * @param {Object} params - The social account attachment parameters.
    * @param {SocialProvider} params.provider - The social provider to attach ('steam', 'vk', or 'twitch').
    * @param {string} params.redirectUrl - The URL to redirect back to after authorization.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<SocialAttachResponse|ServerError>} A promise that resolves with the authorization URL
    *                                                       or a server error if the request fails.
    * @throws {ValidationError} Throws an error if the provider is not supported.
@@ -42,13 +40,19 @@ class UserInteraction {
    * // Redirect user to response.url
    * window.location.href = response.url;
    */
-  async attachSocialAccount({
-    provider,
-    redirectUrl,
-  }: {
-    provider: SocialProvider
-    redirectUrl: string
-  }): Promise<SocialAttachResponse | ServerError> {
+  async attachSocialAccount(
+    params: { provider: SocialProvider; redirectUrl: string },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<SocialAttachRawResponse | ServerError>
+  async attachSocialAccount(
+    params: { provider: SocialProvider; redirectUrl: string },
+    callOptions?: CallOptions,
+  ): Promise<SocialAttachResponse | ServerError>
+  async attachSocialAccount(
+    params: { provider: SocialProvider; redirectUrl: string },
+    callOptions: CallOptions = {},
+  ): Promise<SocialAttachRawResponse | SocialAttachResponse | ServerError> {
+    const { provider, redirectUrl } = params
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     if (!Object.values(SocialProvider).includes(provider)) {
@@ -56,19 +60,19 @@ class UserInteraction {
     }
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
     const attachUrl = new URL(`/api/${app}/user/attach/${provider}`, apiUrl)
     attachUrl.searchParams.set('redirectUrl', redirectUrl)
 
-    const res = await apiRequest(attachUrl.toString(), {
-      method: 'GET',
-      headers: { ...authenticationHeader },
-    })
-
-    const data = responseFormatter(res) as SocialAttachResponse
-
-    return data
+    return this.request<SocialAttachRawResponse>(
+      attachUrl.toString(),
+      {
+        method: 'GET',
+        headers: { ...authenticationHeader },
+      },
+      callOptions,
+    )
   }
 
   /**
@@ -78,6 +82,7 @@ class UserInteraction {
    * social provider (Steam, VK, or Twitch).
    *
    * @param {SocialProvider} provider - The social provider to detach ('steam', 'vk', or 'twitch').
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<{success: boolean}|ServerError>} A promise that resolves with success status
    *                                                     or a server error if the request fails.
    * @throws {ValidationError} Throws an error if the provider is not supported.
@@ -92,7 +97,16 @@ class UserInteraction {
    */
   async detachSocialAccount(
     provider: SocialProvider,
-  ): Promise<{ success: boolean } | ServerError> {
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<SimpleSuccessResponse | ServerError>
+  async detachSocialAccount(
+    provider: SocialProvider,
+    callOptions?: CallOptions,
+  ): Promise<{ success: boolean } | ServerError>
+  async detachSocialAccount(
+    provider: SocialProvider,
+    callOptions: CallOptions = {},
+  ): Promise<SimpleSuccessResponse | { success: boolean } | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     if (!Object.values(SocialProvider).includes(provider)) {
@@ -100,19 +114,16 @@ class UserInteraction {
     }
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
-    const res = await apiRequest(
+    return this.request<SimpleSuccessResponse>(
       `${apiUrl}/api/${app}/user/unattach/${provider}`,
       {
         method: 'DELETE',
         headers: { ...authenticationHeader },
       },
+      callOptions,
     )
-
-    const data = responseFormatter(res) as { success: boolean }
-
-    return data
   }
 
   /**
@@ -122,6 +133,7 @@ class UserInteraction {
    * user's `ping` field with the current timestamp and can be used to determine
    * if a user is online or their last seen time.
    *
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<{success: boolean}|ServerError>} A promise that resolves with success status
    *                                                     or a server error if the request fails.
    * @async
@@ -139,21 +151,29 @@ class UserInteraction {
    *   await emdCloud.user.ping();
    * }, 30000);
    */
-  async ping(): Promise<{ success: boolean } | ServerError> {
+  async ping(
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<SimpleSuccessResponse | ServerError>
+  async ping(
+    callOptions?: CallOptions,
+  ): Promise<{ success: boolean } | ServerError>
+  async ping(
+    callOptions: CallOptions = {},
+  ): Promise<SimpleSuccessResponse | { success: boolean } | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/user/ping`, {
-      method: 'POST',
-      headers: { ...authenticationHeader },
-      body: null,
-    })
-
-    const data = responseFormatter(res) as { success: boolean }
-
-    return data
+    return this.request<SimpleSuccessResponse>(
+      `${apiUrl}/api/${app}/user/ping`,
+      {
+        method: 'POST',
+        headers: { ...authenticationHeader },
+        body: null,
+      },
+      callOptions,
+    )
   }
 
   /**
@@ -169,6 +189,7 @@ class UserInteraction {
    * @param {string} [options.orderBy='createdAt'] - Field to sort by.
    * @param {'ASC'|'DESC'} [options.sort='DESC'] - Sort direction.
    * @param {AccountStatus|null} [options.accountStatus] - Filter by account status.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserListResponse|ServerError>} A promise that resolves with the list of users
    *                                                   and total count, or a server error if the request fails.
    * @async
@@ -197,12 +218,21 @@ class UserInteraction {
    * });
    */
   async getUserList(
+    options: UserListOptions,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<UserListRawResponse | ServerError>
+  async getUserList(
+    options?: UserListOptions,
+    callOptions?: CallOptions,
+  ): Promise<UserListResponse | ServerError>
+  async getUserList(
     options: UserListOptions = {},
-  ): Promise<UserListResponse | ServerError> {
+    callOptions: CallOptions = {},
+  ): Promise<UserListRawResponse | UserListResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
     const { search, limit, page, orderBy, sort, accountStatus } = options
 
@@ -215,17 +245,14 @@ class UserInteraction {
     if (accountStatus !== undefined && accountStatus !== null)
       queryParams.set('accountStatus', accountStatus)
 
-    const res = await apiRequest(
+    return this.request<UserListRawResponse>(
       `${apiUrl}/api/${app}/user/list?${queryParams.toString()}`,
       {
         method: 'GET',
         headers: { ...authenticationHeader },
       },
+      callOptions,
     )
-
-    const data = responseFormatter(res) as UserListResponse
-
-    return data
   }
 
   /**
@@ -236,6 +263,7 @@ class UserInteraction {
    * on permissions.
    *
    * @param {string} userId - The unique identifier (_id) of the user to retrieve.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise that resolves with the user's detailed data
    *                                          or a server error if the request fails.
    * @async
@@ -253,7 +281,18 @@ class UserInteraction {
    *   console.log('My full details:', fullDetails);
    * }
    */
-  async getUserDetails(userId: string): Promise<UserData | ServerError> {
+  async getUserDetails(
+    userId: string,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async getUserDetails(
+    userId: string,
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async getUserDetails(
+    userId: string,
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
     if (!userId) {
       throw new ValidationError('User ID is required')
     }
@@ -261,16 +300,16 @@ class UserInteraction {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/user/${userId}`, {
-      method: 'GET',
-      headers: { ...authenticationHeader },
-    })
-
-    const data = responseFormatter(res) as UserData
-
-    return data
+    return this.request<AuthUserResponse>(
+      `${apiUrl}/api/${app}/user/${userId}`,
+      {
+        method: 'GET',
+        headers: { ...authenticationHeader },
+      },
+      callOptions,
+    )
   }
 }
 

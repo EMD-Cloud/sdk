@@ -74,3 +74,33 @@ export interface UserListResponse {
   data: UserData[]
   total: number
 }
+
+export interface AuthUserResponse {
+  success: true
+  data: UserData
+}
+
+export interface ForgotPassDataResponse {
+  success: true
+  data: ForgotPassData
+}
+
+export interface ForgotPassCheckCodeDataResponse {
+  success: true
+  data: ForgotPassCheckCodeData
+}
+
+export interface SocialAttachRawResponse {
+  success: true
+  data: SocialAttachResponse
+}
+
+export interface SimpleSuccessResponse {
+  success: true
+  data: { success: boolean }
+}
+
+export interface UserListRawResponse {
+  success: true
+  data: UserListResponse
+}

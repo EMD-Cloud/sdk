@@ -1,9 +1,8 @@
 import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { NotAllowedError } from 'src/errors/NotAllowedError'
 import { ServerError } from 'src/errors/ServerError'
 import { ValidationError } from 'src/errors/ValidationError'
-import { apiRequest } from 'src/utils/fetch'
-import { responseFormatter } from 'src/utils/formatters'
 import type { CallOptions } from 'src/types/common'
 import type {
   DatabaseListOptions,
@@ -12,7 +11,6 @@ import type {
   DatabaseUpdateOptions,
   DatabaseBulkUpdatePayload,
   DatabaseGetRowOptions,
-  DatabaseRowData,
   DatabaseRowResponse,
   DatabaseRowsResponse,
   DatabaseCountResponse,
@@ -21,12 +19,11 @@ import type {
   DatabaseTriggerResponse,
 } from 'src/types/database'
 
-class Database {
-  private applicationOptions: AppOptions
+class Database extends BaseModule {
   private readonly collectionId: string
 
   constructor(applicationOptions: AppOptions, collectionId: string) {
-    this.applicationOptions = applicationOptions
+    super(applicationOptions)
     this.collectionId = collectionId
   }
 
@@ -99,7 +96,7 @@ class Database {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
 
-    const res = await apiRequest(
+    return this.request<DatabaseRowsResponse<T>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'POST',
@@ -109,13 +106,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseRowsResponse<T>
-    }
-
-    return responseFormatter(res) as DatabaseRowsResponse<T>['data']
   }
 
   /**
@@ -166,7 +158,7 @@ class Database {
     if (query !== undefined) payload.query = query
     if (createdAt !== undefined) payload.createdAt = createdAt
 
-    const res = await apiRequest(
+    return this.request<DatabaseCountResponse>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/count`,
       {
         method: 'POST',
@@ -176,13 +168,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseCountResponse
-    }
-
-    return responseFormatter(res) as DatabaseCountResponse['data']
   }
 
   /**
@@ -237,7 +224,7 @@ class Database {
       ? `?useHumanReadableNames=${useHumanReadableNames}`
       : ''
 
-    const res = await apiRequest(
+    return this.request<DatabaseRowResponse<T>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/${rowId}${queryParams}`,
       {
         method: 'GET',
@@ -245,13 +232,8 @@ class Database {
           ...authorizationHeader,
         },
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseRowResponse<T>
-    }
-
-    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -299,7 +281,7 @@ class Database {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
 
-    const res = await apiRequest(
+    return this.request<DatabaseRowResponse<T>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'PUT',
@@ -309,13 +291,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseRowResponse<T>
-    }
-
-    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -370,7 +347,7 @@ class Database {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
 
-    const res = await apiRequest(
+    return this.request<DatabaseRowResponse<T>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'PUT',
@@ -380,13 +357,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseRowResponse<T>
-    }
-
-    return responseFormatter(res) as DatabaseRowResponse<T>['data']
   }
 
   /**
@@ -423,7 +395,7 @@ class Database {
       callOptions.authType,
     )
 
-    const res = await apiRequest(
+    return this.request<DatabaseBulkResponse>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/bulk`,
       {
         method: 'POST',
@@ -433,13 +405,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseBulkResponse
-    }
-
-    return responseFormatter(res) as DatabaseBulkResponse['data']
   }
 
   /**
@@ -473,7 +440,7 @@ class Database {
       _id: rowId,
     }
 
-    const res = await apiRequest(
+    return this.request<DatabaseDeleteResponse>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'DELETE',
@@ -483,13 +450,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseDeleteResponse
-    }
-
-    return responseFormatter(res) as DatabaseDeleteResponse['data']
   }
 
   /**
@@ -526,7 +488,7 @@ class Database {
       _ids: rowIds,
     }
 
-    const res = await apiRequest(
+    return this.request<DatabaseDeleteResponse>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/many`,
       {
         method: 'DELETE',
@@ -536,13 +498,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseDeleteResponse
-    }
-
-    return responseFormatter(res) as DatabaseDeleteResponse['data']
   }
 
   /**
@@ -584,7 +541,7 @@ class Database {
       columnId,
     }
 
-    const res = await apiRequest(
+    return this.request<DatabaseTriggerResponse>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/${rowId}/button`,
       {
         method: 'POST',
@@ -594,13 +551,8 @@ class Database {
         },
         body: JSON.stringify(payload),
       },
+      callOptions,
     )
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as DatabaseTriggerResponse
-    }
-
-    return responseFormatter(res) as DatabaseTriggerResponse['data']
   }
 }
 

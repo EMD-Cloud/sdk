@@ -1,4 +1,4 @@
-import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { ValidationError } from 'src/errors/ValidationError'
 import { ServerError } from 'src/errors/ServerError'
 import type {
@@ -6,21 +6,19 @@ import type {
   ForgotPassData,
   UserData,
   OAuthUrlResponse,
+  AuthUserResponse,
+  ForgotPassDataResponse,
+  ForgotPassCheckCodeDataResponse,
 } from 'src/types/user'
 import { SocialProvider } from '../types'
 import { apiRequest } from 'src/utils/fetch'
 import { responseFormatter } from 'src/utils/formatters'
+import type { CallOptions } from 'src/types/common'
 
 // HTTP redirect status codes
 const REDIRECT_STATUS_CODES = [301, 302, 303, 307, 308] as const
 
-class Auth {
-  private applicationOptions: AppOptions
-
-  constructor(applicationOptions: AppOptions) {
-    this.applicationOptions = applicationOptions
-  }
-
+class Auth extends BaseModule {
   /**
    * Attempts to authorize the current user using a stored authentication token.
    *
@@ -34,23 +32,31 @@ class Auth {
    * @returns {Promise<UserData | ServerError | ValidationError | null>} Resolves with the user data, `null`,
    *          or throws a ServerError/ValidationError if the authorization request fails.
    */
-  async authorization(): Promise<
-    UserData | ServerError | ValidationError | null
+  async authorization(
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError | ValidationError | null>
+  async authorization(
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError | ValidationError | null>
+  async authorization(
+    callOptions: CallOptions = {},
+  ): Promise<
+    AuthUserResponse | UserData | ServerError | ValidationError | null
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/auth/me`, {
-      method: 'POST',
-      headers: { ...authenticationHeader },
-      body: null,
-    })
-
-    const data = responseFormatter(res) as UserData
-
-    return data
+    return this.request<AuthUserResponse>(
+      `${apiUrl}/api/${app}/auth/me`,
+      {
+        method: 'POST',
+        headers: { ...authenticationHeader },
+        body: null,
+      },
+      callOptions,
+    )
   }
 
   /**
@@ -59,18 +65,25 @@ class Auth {
    * @param {Object} params - The login parameters.
    * @param {string} params.login - The user's login identifier.
    * @param {string} params.password - The user's password.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise that resolves with the user data on successful login
    *                                         or a server error response on failure.
    * @throws {Error} Throws an error if the API request fails or the server returns an error.
    * @async
    */
-  async login({
-    login,
-    password,
-  }: {
-    login: string
-    password: string
-  }): Promise<UserData | ServerError> {
+  async login(
+    params: { login: string; password: string },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async login(
+    params: { login: string; password: string },
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async login(
+    params: { login: string; password: string },
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
+    const { login, password } = params
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const res = await apiRequest(`${apiUrl}/api/${app}/auth/login`, {
@@ -83,19 +96,24 @@ class Auth {
 
     this.applicationOptions.setAuthToken(data.token)
 
+    if (callOptions.ignoreFormatResponse) {
+      return res as unknown as AuthUserResponse
+    }
+
     return data
   }
 
   /**
    * Asynchronously registers a new user with the provided user details.
    *
-   * @param {Object} options - The options for registration.
-   * @param {string} [options.firstName] - The first name of the user.
-   * @param {string} [options.lastName] - The last name of the user.
-   * @param {string} options.login - The login identifier for the user.
-   * @param {string} options.password - The password for the user account.
-   * @param {Record<string, any>} [options.customFields] - Additional custom fields for the user.
-   * @param {string} [options.captchaToken] - A token to verify the request is coming from a human.
+   * @param {Object} params - The options for registration.
+   * @param {string} [params.firstName] - The first name of the user.
+   * @param {string} [params.lastName] - The last name of the user.
+   * @param {string} params.login - The login identifier for the user.
+   * @param {string} params.password - The password for the user account.
+   * @param {Record<string, any>} [params.customFields] - Additional custom fields for the user.
+   * @param {string} [params.captchaToken] - A token to verify the request is coming from a human.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise that resolves to the user data on successful registration
    * or a server error if the registration fails.
    * @async
@@ -109,21 +127,41 @@ class Auth {
    *   captchaToken: 'abcd1234'
    * });
    */
-  async registration({
-    firstName,
-    lastName,
-    login,
-    password,
-    customFields,
-    captchaToken,
-  }: {
-    firstName?: string
-    lastName?: string
-    login: string
-    password: string
-    customFields?: Record<string, any>
-    captchaToken?: string
-  }): Promise<UserData | ServerError> {
+  async registration(
+    params: {
+      firstName?: string
+      lastName?: string
+      login: string
+      password: string
+      customFields?: Record<string, any>
+      captchaToken?: string
+    },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async registration(
+    params: {
+      firstName?: string
+      lastName?: string
+      login: string
+      password: string
+      customFields?: Record<string, any>
+      captchaToken?: string
+    },
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async registration(
+    params: {
+      firstName?: string
+      lastName?: string
+      login: string
+      password: string
+      customFields?: Record<string, any>
+      captchaToken?: string
+    },
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
+    const { firstName, lastName, login, password, customFields, captchaToken } =
+      params
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const res = await apiRequest(`${apiUrl}/api/${app}/auth/register`, {
@@ -143,6 +181,10 @@ class Auth {
 
     this.applicationOptions.setAuthToken(data.token)
 
+    if (callOptions.ignoreFormatResponse) {
+      return res as unknown as AuthUserResponse
+    }
+
     return data
   }
 
@@ -152,24 +194,35 @@ class Auth {
    * Handles the response by formatting it and returning the relevant data.
    *
    * @param {string} email - The email address of the user who has forgotten their password.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<ForgotPassData | ServerError>} - A promise that resolves with the password reset data
-   * or an error if the operation fails. The promise will resolve with either ForgotPassData on success
-   * or ServerError on failure.
+   * or an error if the operation fails.
    * @throws {ServerError} Throws an error if the response from the server indicates a failure.
    * @async
    */
-  async forgotPassword(email: string): Promise<ForgotPassData | ServerError> {
+  async forgotPassword(
+    email: string,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ForgotPassDataResponse | ServerError>
+  async forgotPassword(
+    email: string,
+    callOptions?: CallOptions,
+  ): Promise<ForgotPassData | ServerError>
+  async forgotPassword(
+    email: string,
+    callOptions: CallOptions = {},
+  ): Promise<ForgotPassDataResponse | ForgotPassData | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/auth/forgot`, {
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-      method: 'POST',
-    })
-
-    const data = responseFormatter(res) as ForgotPassData
-
-    return data
+    return this.request<ForgotPassDataResponse>(
+      `${apiUrl}/api/${app}/auth/forgot`,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        method: 'POST',
+      },
+      callOptions,
+    )
   }
 
   /**
@@ -182,9 +235,8 @@ class Auth {
    * @param {Object} params - The parameters for verifying the password recovery code.
    * @param {string} params.requestId - The unique identifier for the password recovery request.
    * @param {string} params.code - The verification code submitted by the user.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<ForgotPassCheckCodeData|ServerError>} A promise that resolves to the result of the verification process.
-   *  If successful, it returns an object containing data related to the password recovery process.
-   *  If an error occurs, it returns an object representing the server error.
    * @throws {ServerError} Throws an error if the server response indicates a failure.
    *
    * @example
@@ -197,27 +249,32 @@ class Auth {
    *   }
    * }
    */
-  async forgotPasswordCheckCode({
-    requestId,
-    code,
-  }: {
-    requestId: string
-    code: string
-  }): Promise<ForgotPassCheckCodeData | ServerError> {
+  async forgotPasswordCheckCode(
+    params: { requestId: string; code: string },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<ForgotPassCheckCodeDataResponse | ServerError>
+  async forgotPasswordCheckCode(
+    params: { requestId: string; code: string },
+    callOptions?: CallOptions,
+  ): Promise<ForgotPassCheckCodeData | ServerError>
+  async forgotPasswordCheckCode(
+    params: { requestId: string; code: string },
+    callOptions: CallOptions = {},
+  ): Promise<
+    ForgotPassCheckCodeDataResponse | ForgotPassCheckCodeData | ServerError
+  > {
+    const { requestId, code } = params
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const res = await apiRequest(
+    return this.request<ForgotPassCheckCodeDataResponse>(
       `${apiUrl}/api/${app}/auth/forgot/${requestId}`,
       {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),
         method: 'POST',
       },
+      callOptions,
     )
-
-    const data = responseFormatter(res) as ForgotPassCheckCodeData
-
-    return data
   }
 
   /**
@@ -228,26 +285,44 @@ class Auth {
    * @param {string} params.requestId - The request ID associated with the password reset request.
    * @param {string} params.newPassword - The new password to be set.
    * @param {string} params.newPasswordRepeat - The new password repeated for verification.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise that resolves to the user data on successful password change
    * or throws an error if the passwords do not match or if the server responds with an error.
    * @throws {ValidationError} Throws ValidationError if the new passwords do not match.
    * @async
    */
-  async forgotPasswordChange({
-    requestId,
-    newPassword,
-    newPasswordRepeat,
-  }: {
-    requestId: string
-    newPassword: string
-    newPasswordRepeat: string
-  }): Promise<UserData | ServerError> {
+  async forgotPasswordChange(
+    params: {
+      requestId: string
+      newPassword: string
+      newPasswordRepeat: string
+    },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async forgotPasswordChange(
+    params: {
+      requestId: string
+      newPassword: string
+      newPasswordRepeat: string
+    },
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async forgotPasswordChange(
+    params: {
+      requestId: string
+      newPassword: string
+      newPasswordRepeat: string
+    },
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
+    const { requestId, newPassword, newPasswordRepeat } = params
+
     if (newPassword !== newPasswordRepeat)
       throw new ValidationError('Passwords is not match')
 
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const res = await apiRequest(
+    return this.request<AuthUserResponse>(
       `${apiUrl}/api/${app}/auth/forgot/${requestId}`,
       {
         headers: { 'Content-Type': 'application/json' },
@@ -257,11 +332,8 @@ class Auth {
         }),
         method: 'PUT',
       },
+      callOptions,
     )
-
-    const data = responseFormatter(res) as UserData
-
-    return data
   }
 
   /**
@@ -377,6 +449,7 @@ class Auth {
    * token for a permanent authentication token and user data.
    *
    * @param {string} secret - The secret token received from the OAuth callback.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise that resolves with the authenticated user data
    *                                          including the authentication token, or a server error if the exchange fails.
    * @throws {ValidationError} Throws an error if the secret token is missing.
@@ -392,7 +465,18 @@ class Auth {
    *   console.log('Authenticated user:', userData);
    * }
    */
-  async exchangeOAuthToken(secret: string): Promise<UserData | ServerError> {
+  async exchangeOAuthToken(
+    secret: string,
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async exchangeOAuthToken(
+    secret: string,
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async exchangeOAuthToken(
+    secret: string,
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
     if (!secret) {
       throw new ValidationError('OAuth secret token is required')
     }
@@ -414,6 +498,10 @@ class Auth {
       this.applicationOptions.setAuthToken(data.token)
     }
 
+    if (callOptions.ignoreFormatResponse) {
+      return res as unknown as AuthUserResponse
+    }
+
     return data
   }
 
@@ -427,13 +515,14 @@ class Auth {
    * @param {string} [payload.patronymicName] - The updated patronymic (middle) name of the user.
    * @param {string} [payload.login] - The new login identifier for the user.
    * @param {Record<string, any>} [payload.customFields] - Additional custom fields to update.
-   * @param {string} [payload.avatarUrl] - URL to the user’s avatar image.
-   * @param {string} [payload.password] - The user’s current password (required for sensitive updates in some cases).
+   * @param {string} [payload.avatarUrl] - URL to the user's avatar image.
+   * @param {string} [payload.password] - The user's current password (required for sensitive updates in some cases).
    * @param {string} [payload.oldPassword] - The current password (when changing password).
    * @param {string} [payload.newPassword1] - The new password (first entry).
    * @param {string} [payload.newPassword2] - The new password (confirmation).
    * @param {string} [payload.accountStatus] - The status of the account (e.g., 'active', 'disabled').
    * @param {boolean} [payload.staffManage] - Whether the user has staff management permissions.
+   * @param {CallOptions} callOptions - Additional options for the API call.
    * @returns {Promise<UserData|ServerError>} A promise resolving with the updated user data,
    * or an error if the update fails.
    * @async
@@ -446,35 +535,77 @@ class Auth {
    *   customFields: { department: 'Sales' },
    * });
    */
-  async updateUser(payload: {
-    _id?: string
-    firstName?: string
-    lastName?: string
-    patronymicName?: string
-    login?: string
-    customFields?: Record<string, any>
-    avatarUrl?: string
-    password?: string
-    oldPassword?: string
-    newPassword1?: string
-    newPassword2?: string
-    accountStatus?: string
-    staffManage?: boolean
-  }): Promise<UserData | ServerError> {
+  async updateUser(
+    payload: {
+      _id?: string
+      firstName?: string
+      lastName?: string
+      patronymicName?: string
+      login?: string
+      customFields?: Record<string, any>
+      avatarUrl?: string
+      password?: string
+      oldPassword?: string
+      newPassword1?: string
+      newPassword2?: string
+      accountStatus?: string
+      staffManage?: boolean
+    },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<AuthUserResponse | ServerError>
+  async updateUser(
+    payload: {
+      _id?: string
+      firstName?: string
+      lastName?: string
+      patronymicName?: string
+      login?: string
+      customFields?: Record<string, any>
+      avatarUrl?: string
+      password?: string
+      oldPassword?: string
+      newPassword1?: string
+      newPassword2?: string
+      accountStatus?: string
+      staffManage?: boolean
+    },
+    callOptions?: CallOptions,
+  ): Promise<UserData | ServerError>
+  async updateUser(
+    payload: {
+      _id?: string
+      firstName?: string
+      lastName?: string
+      patronymicName?: string
+      login?: string
+      customFields?: Record<string, any>
+      avatarUrl?: string
+      password?: string
+      oldPassword?: string
+      newPassword1?: string
+      newPassword2?: string
+      accountStatus?: string
+      staffManage?: boolean
+    },
+    callOptions: CallOptions = {},
+  ): Promise<AuthUserResponse | UserData | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader()
+      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/user`, {
-      headers: { 'Content-Type': 'application/json', ...authenticationHeader },
-      body: JSON.stringify(payload),
-      method: 'PUT',
-    })
-
-    const data = responseFormatter(res) as UserData
-
-    return data
+    return this.request<AuthUserResponse>(
+      `${apiUrl}/api/${app}/user`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...authenticationHeader,
+        },
+        body: JSON.stringify(payload),
+        method: 'PUT',
+      },
+      callOptions,
+    )
   }
 }
 

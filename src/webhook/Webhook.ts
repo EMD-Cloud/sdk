@@ -1,18 +1,9 @@
-import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { ServerError } from 'src/errors/ServerError'
-import type { UserData } from 'src/types/user'
-import { apiRequest } from 'src/utils/fetch'
-import { responseFormatter } from 'src/utils/formatters'
 import type { CallOptions } from 'src/types/common'
-import type { WebhookData, WebhookResponse } from 'src/types/webhook'
+import type { WebhookResponse } from 'src/types/webhook'
 
-class Webhook {
-  private applicationOptions: AppOptions
-
-  constructor(applicationOptions: AppOptions) {
-    this.applicationOptions = applicationOptions
-  }
-
+class Webhook extends BaseModule {
   /**
    * Performs an API request to a specified webhook endpoint and returns the response.
    *
@@ -51,16 +42,14 @@ class Webhook {
       callOptions.authType,
     )
 
-    const res = await apiRequest(`${apiUrl}/api/${app}/webhook/${id}`, {
-      ...requestOptions,
-      headers: { ...authorizationHeader, ...requestOptions?.headers },
-    })
-
-    if (callOptions.ignoreFormatResponse) {
-      return res as WebhookResponse
-    }
-
-    return responseFormatter(res) as WebhookResponse['data']
+    return this.request<WebhookResponse>(
+      `${apiUrl}/api/${app}/webhook/${id}`,
+      {
+        ...requestOptions,
+        headers: { ...authorizationHeader, ...requestOptions?.headers },
+      },
+      callOptions,
+    )
   }
 }
 
