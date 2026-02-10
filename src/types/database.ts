@@ -203,6 +203,36 @@ export type ResolveRelations<T, D extends number = 1> = {
   [K in keyof T]: ResolveField<T[K], D>
 }
 
+/**
+ * Convenience type: a database row with relations resolved to depth D.
+ *
+ * Composes {@link DatabaseRowData} with {@link ResolveRelations} in one step.
+ *
+ * @example
+ * // Before
+ * type Tournament = DatabaseRowData<ResolveRelations<TournamentSchema>>
+ *
+ * // After
+ * type Tournament = DatabaseEntity<TournamentSchema>
+ */
+export type DatabaseEntity<T, D extends number = 1> = DatabaseRowData<
+  ResolveRelations<T, D>
+>
+
+/**
+ * Convenience type for write-path data (create / update payloads).
+ *
+ * Resolves all {@link Relation} markers to plain ObjectId strings and
+ * {@link RelationMany} markers to `string[]`.
+ *
+ * @example
+ * type TourPayload = DatabaseWriteData<TourSchema>
+ * // { title: string; tournament: string }
+ *
+ * await tourDb.createRow({ title: 'Round 1', tournament: '507f...' } satisfies TourPayload)
+ */
+export type DatabaseWriteData<T> = ResolveRelations<T, 0>
+
 export interface DatabaseRowResponse<T = Record<string, any>> {
   success: true
   data: DatabaseRowData<T>

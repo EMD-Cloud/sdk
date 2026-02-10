@@ -102,6 +102,8 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - `Relation<T>`: Marker type for has-one relation fields (backend `Direction.HasOne`). Resolves to `DatabaseRelatedRowData<T>` or `null` at D=1, `string` at D=0
 - `RelationMany<T>`: Marker type for has-many relation fields (backend `Direction.HasMany`). Resolves to `DatabaseRelatedRowData<T>[]` at D=1, `string[]` at D=0
 - `ResolveRelations<T, D>`: Transforms relation markers based on depth — D=1 (default) matches API read responses, D=0 matches write payloads
+- `DatabaseEntity<T, D>`: Convenience type — `DatabaseRowData<ResolveRelations<T, D>>`. Single-step alias for a full row with resolved relations
+- `DatabaseWriteData<T>`: Write-path data shape — `ResolveRelations<T, 0>`. All relations become plain ObjectId strings
 - `ChatChannelType`: Enum for chat types (Public, StaffToUser, PeerToPeer, Staff)
 - `ChatChannel`: Channel data structure (id, type, accesses, settings, unread counts, resolved)
 - `ChatMessage`: Message structure (channel, message, user, attaches, timestamps)

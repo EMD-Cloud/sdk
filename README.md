@@ -1184,6 +1184,34 @@ match.next_match_win       // DatabaseRelatedRowData<{ name: string; next_match_
 match.prev_match_win       // DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
 ```
 
+**Convenience types:**
+
+The SDK also provides shorthand types to reduce boilerplate when typing entities and write payloads:
+
+- `DatabaseEntity<T>` — equivalent to `DatabaseRowData<ResolveRelations<T>>` (a full row with resolved relations)
+- `DatabaseWriteData<T>` — equivalent to `ResolveRelations<T, 0>` (flat ID shapes for `createRow` / `updateRow`)
+
+```typescript
+import {
+  DatabaseEntity,
+  DatabaseWriteData,
+} from '@emd-cloud/sdk'
+
+// Before
+type Tournament = DatabaseRowData<ResolveRelations<TournamentSchema>>
+
+// After
+type Tournament = DatabaseEntity<TournamentSchema>
+
+// Write payload with flat ObjectId strings
+type TourPayload = DatabaseWriteData<TourSchema>
+// { title: string; tournament: string }
+
+await tourDb.createRow(
+  { title: 'Round 1', tournament: '507f1f77bcf86cd799439011' } satisfies TourPayload
+)
+```
+
 > **Note:** By default, resolved relation rows use the `DatabaseRelatedRowData` shape (`_id`, `data`, `createdAt`, `updatedAt`) — `user` and `notice` are never present on relation rows. When `hasOptimiseResponse` is enabled in list options, a server-side projection may further limit which fields are returned.
 
 <br>
