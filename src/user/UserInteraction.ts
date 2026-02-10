@@ -59,8 +59,9 @@ class UserInteraction extends BaseModule {
       throw new ValidationError(`Unsupported social provider: ${provider}`)
     }
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     const attachUrl = new URL(`/api/${app}/user/attach/${provider}`, apiUrl)
     attachUrl.searchParams.set('redirectUrl', redirectUrl)
@@ -113,8 +114,9 @@ class UserInteraction extends BaseModule {
       throw new ValidationError(`Unsupported social provider: ${provider}`)
     }
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     return this.request<SimpleSuccessResponse>(
       `${apiUrl}/api/${app}/user/unattach/${provider}`,
@@ -162,8 +164,9 @@ class UserInteraction extends BaseModule {
   ): Promise<SimpleSuccessResponse | { success: boolean } | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     return this.request<SimpleSuccessResponse>(
       `${apiUrl}/api/${app}/user/ping`,
@@ -231,8 +234,9 @@ class UserInteraction extends BaseModule {
   ): Promise<UserListRawResponse | UserListResponse | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     const { search, limit, page, orderBy, sort, accountStatus } = options
 
@@ -299,8 +303,9 @@ class UserInteraction extends BaseModule {
 
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     return this.request<AuthUserResponse>(
       `${apiUrl}/api/${app}/user/${userId}`,

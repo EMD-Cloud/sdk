@@ -34,7 +34,11 @@ class AppOptions {
   }
 
   getOptions() {
-    return { apiUrl: this.apiUrl, websocketUrl: this.websocketUrl, app: this.appId }
+    return {
+      apiUrl: this.apiUrl,
+      websocketUrl: this.websocketUrl,
+      app: this.appId,
+    }
   }
 
   getEnvironment() {

@@ -25,7 +25,10 @@ export class ChatWebSocket {
   private subscribedChannels: Set<string> = new Set()
   private callbacks: ChatWebSocketCallbacks = {}
   private chatAuth: ChatAuth
-  private options: Omit<Required<ChatWebSocketOptions>, 'authToken' | 'userData' | 'callbacks'> & {
+  private options: Omit<
+    Required<ChatWebSocketOptions>,
+    'authToken' | 'userData' | 'callbacks'
+  > & {
     authToken?: string
     userData: Partial<UserData>
   }
@@ -57,7 +60,10 @@ export class ChatWebSocket {
    * @returns Promise that resolves when connected
    */
   async connect(): Promise<void> {
-    if (this.ws?.readyState === WebSocket.CONNECTING || this.ws?.readyState === WebSocket.OPEN) {
+    if (
+      this.ws?.readyState === WebSocket.CONNECTING ||
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
       return Promise.resolve()
     }
 
@@ -143,10 +149,7 @@ export class ChatWebSocket {
    * @param chatId - Optional chat ID for authentication
    * @returns Promise that resolves when subscription succeeds
    */
-  async subscribeToChannel(
-    channelId: string,
-    chatId?: string,
-  ): Promise<void> {
+  async subscribeToChannel(channelId: string, chatId?: string): Promise<void> {
     if (!this.socketId) {
       throw new Error('Not connected. Call connect() first.')
     }
@@ -166,7 +169,7 @@ export class ChatWebSocket {
           event: WebSocketEvent.SignIn,
           data: {
             ...auth,
-          }
+          },
         })
 
         // Send subscription request

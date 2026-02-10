@@ -482,7 +482,9 @@ class Chat extends BaseModule {
     channelId: string,
     options: ChatMessageListOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<ChatMessageListResponse | ChatMessageListResponse['data'] | ServerError> {
+  ): Promise<
+    ChatMessageListResponse | ChatMessageListResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authHeaders: Record<string, string> = {}

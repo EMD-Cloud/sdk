@@ -55,7 +55,9 @@ class Database extends BaseModule {
   async getRows<T = Record<string, any>>(
     options: DatabaseListOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowsResponse<T> | DatabaseRowsResponse<T>['data'] | ServerError> {
+  ): Promise<
+    DatabaseRowsResponse<T> | DatabaseRowsResponse<T>['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -133,7 +135,9 @@ class Database extends BaseModule {
   async countRows(
     options: DatabaseCountOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseCountResponse | DatabaseCountResponse['data'] | ServerError> {
+  ): Promise<
+    DatabaseCountResponse | DatabaseCountResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -200,7 +204,9 @@ class Database extends BaseModule {
     rowId: string,
     options: DatabaseGetRowOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
+  ): Promise<
+    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     let authorizationHeader: Record<string, string> = {}
@@ -264,7 +270,9 @@ class Database extends BaseModule {
     rowData: Record<string, any>,
     options: DatabaseCreateOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
+  ): Promise<
+    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -328,7 +336,9 @@ class Database extends BaseModule {
     rowData: Record<string, any>,
     options: DatabaseUpdateOptions = {},
     callOptions: CallOptions = {},
-  ): Promise<DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError> {
+  ): Promise<
+    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -388,7 +398,9 @@ class Database extends BaseModule {
   async bulkUpdate(
     payload: DatabaseBulkUpdatePayload,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseBulkResponse | DatabaseBulkResponse['data'] | ServerError> {
+  ): Promise<
+    DatabaseBulkResponse | DatabaseBulkResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -429,7 +441,9 @@ class Database extends BaseModule {
   async deleteRow(
     rowId: string,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError> {
+  ): Promise<
+    DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -477,7 +491,9 @@ class Database extends BaseModule {
   async deleteRows(
     rowIds: string[],
     callOptions: CallOptions = {},
-  ): Promise<DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError> {
+  ): Promise<
+    DatabaseDeleteResponse | DatabaseDeleteResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
@@ -530,7 +546,9 @@ class Database extends BaseModule {
     rowId: string,
     columnId: string,
     callOptions: CallOptions = {},
-  ): Promise<DatabaseTriggerResponse | DatabaseTriggerResponse['data'] | ServerError> {
+  ): Promise<
+    DatabaseTriggerResponse | DatabaseTriggerResponse['data'] | ServerError
+  > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
     const authorizationHeader = this.applicationOptions.getAuthorizationHeader(

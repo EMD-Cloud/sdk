@@ -339,7 +339,10 @@ export type MessageCallback = (message: ChatMessage) => void
 /**
  * WebSocket callback for message deletion
  */
-export type MessageDeletedCallback = (data: { _id: string; channel: string }) => void
+export type MessageDeletedCallback = (data: {
+  _id: string
+  channel: string
+}) => void
 
 /**
  * WebSocket callback for support count updates

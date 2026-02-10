@@ -42,6 +42,7 @@
 		-   [Method: database.deleteRow](#method--databasedeleterow)
 		-   [Method: database.deleteRows](#method--databasedeleterows)
 		-   [Method: database.triggerButton](#method--databasetriggerbutton)
+		-   [Typing Relations](#typing-relations)
 	-   [Chat methods](#chat-methods)
 		-   [Method: chat.listChannels](#method--chatlistchannels)
 		-   [Method: chat.createChannelByType](#method--chatcreatechannelbytype)
@@ -1103,6 +1104,87 @@ const result = await ordersDb.triggerButton(
   { authType: 'auth-token' }
 );
 ```
+
+<br>
+
+#### Typing Relations
+
+The SDK provides generic marker types for typing relation columns in your database schemas. This gives you compile-time accuracy for both read responses and write payloads.
+
+**Marker types:**
+
+- `Relation<T>` — marks a **has-one** relation field (single row reference)
+- `RelationMany<T>` — marks a **has-many** relation field (multiple row references)
+- `ResolveRelations<T, D>` — transforms relation markers into their resolved types based on depth `D`
+
+**Depth behavior:**
+
+| Depth | Use case | `Relation<T>` becomes | `RelationMany<T>` becomes |
+|-------|----------|----------------------|--------------------------|
+| `D=1` (default) | API read responses (`getRows`, `getRow`) | `DatabaseRowData<T>` (or `null`) | `DatabaseRowData<T>[]` |
+| `D=0` | Write operations (`createRow`, `updateRow`) | `string` (ObjectId) | `string[]` (ObjectId array) |
+
+The API resolves relations exactly **1 level deep**. Nested relation fields inside resolved rows remain as raw ObjectId strings, which is why `D=1` is the correct default for read responses.
+
+**Example — defining schemas and using relation types:**
+
+```typescript
+import {
+  Relation,
+  RelationMany,
+  ResolveRelations,
+  DatabaseRowData,
+} from '@emd-cloud/sdk'
+
+// Define your collection schemas
+interface TeamSchema {
+  name: string
+  country: string
+}
+
+interface TourSchema {
+  title: string
+  tournament: Relation<TournamentSchema>
+}
+
+interface TournamentSchema {
+  title: string
+  tours: RelationMany<TourSchema>
+  winner: Relation<TeamSchema> | null // nullable relation
+}
+
+// --- Reading rows (D=1, default) ---
+const tourDb = emdCloud.database('tours-collection-id')
+const result = await tourDb.getRows<ResolveRelations<TourSchema>>()
+
+// result.data[0].data.tournament is DatabaseRowData<{ title: string; tours: string[]; winner: string | null }>
+const tournamentTitle = result.data[0].data.tournament.data.title // string
+const tourIds = result.data[0].data.tournament.data.tours          // string[] (depth exhausted)
+
+// --- Writing rows (D=0) ---
+type TourWrite = ResolveRelations<TourSchema, 0>
+// { title: string; tournament: string }
+
+await tourDb.createRow(
+  { title: 'Round 1', tournament: '507f1f77bcf86cd799439011' } satisfies TourWrite
+)
+
+// --- Self-referencing relations (e.g. tournament bracket) ---
+interface MatchSchema {
+  name: string
+  next_match_win: Relation<MatchSchema> | null
+  prev_match_win: RelationMany<MatchSchema>
+}
+
+const matchDb = emdCloud.database('matches-collection-id')
+const matches = await matchDb.getRows<ResolveRelations<MatchSchema>>()
+
+const match = matches.data[0].data
+match.next_match_win       // DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
+match.prev_match_win       // DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
+```
+
+> **Note:** By default, resolved relation rows include the full `DatabaseRowData` shape (`_id`, `data`, `user`, `createdAt`, `updatedAt`). When `hasOptimiseResponse` is enabled in list options, a server-side projection may limit which fields are returned in the related rows.
 
 <br>
 <br>

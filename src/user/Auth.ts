@@ -45,8 +45,9 @@ class Auth extends BaseModule {
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     return this.request<AuthUserResponse>(
       `${apiUrl}/api/${app}/auth/me`,
@@ -591,8 +592,9 @@ class Auth extends BaseModule {
   ): Promise<AuthUserResponse | UserData | ServerError> {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
-    const authenticationHeader =
-      this.applicationOptions.getAuthorizationHeader(callOptions.authType)
+    const authenticationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions.authType,
+    )
 
     return this.request<AuthUserResponse>(
       `${apiUrl}/api/${app}/user`,

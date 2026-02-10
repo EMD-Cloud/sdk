@@ -50,6 +50,7 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
   - **Abort capability**: Cancel in-progress uploads programmatically
 - **Database collections**: Each Database instance is scoped to a specific collection within the app's space - create multiple instances for different collections
 - **MongoDB-style queries**: Database module supports complex filtering with `$and`, `$or`, and comparison operators
+- **Relation type resolution**: API resolves relations 1 level deep via `$lookup`. `Relation<T>` → single `DatabaseRowData` or null (`Direction.HasOne`), `RelationMany<T>` → array (`Direction.HasMany`). `ResolveRelations<T>` provides compile-time accuracy for read responses (D=1) and write payloads (D=0). Supports nullable relations (`Relation<T> | null`) and self-referencing schemas.
 - **Chat functionality**: Two-part system for chat communication:
   - **Chat REST API** (`chat`): Manage channels and messages via HTTP (create channels, send messages, list conversations)
   - **ChatWebSocket** (`chatWebSocket()`): Real-time messaging via WebSocket with event-driven architecture
@@ -97,6 +98,9 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - `DatabaseQuery`: MongoDB-style query interface with `$and`, `$or` support
 - `DatabaseListOptions`: Comprehensive options for row retrieval (pagination, sorting, filtering)
 - `DatabaseSaveMode`: Enum for save operations (SYNC | ASYNC)
+- `Relation<T>`: Marker type for has-one relation fields (backend `Direction.HasOne`). Resolves to `DatabaseRowData<T>` or `null` at D=1, `string` at D=0
+- `RelationMany<T>`: Marker type for has-many relation fields (backend `Direction.HasMany`). Resolves to `DatabaseRowData<T>[]` at D=1, `string[]` at D=0
+- `ResolveRelations<T, D>`: Transforms relation markers based on depth — D=1 (default) matches API read responses, D=0 matches write payloads
 - `ChatChannelType`: Enum for chat types (Public, StaffToUser, PeerToPeer, Staff)
 - `ChatChannel`: Channel data structure (id, type, accesses, settings, unread counts, resolved)
 - `ChatMessage`: Message structure (channel, message, user, attaches, timestamps)
