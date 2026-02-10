@@ -1121,7 +1121,7 @@ The SDK provides generic marker types for typing relation columns in your databa
 
 | Depth | Use case | `Relation<T>` becomes | `RelationMany<T>` becomes |
 |-------|----------|----------------------|--------------------------|
-| `D=1` (default) | API read responses (`getRows`, `getRow`) | `DatabaseRowData<T>` (or `null`) | `DatabaseRowData<T>[]` |
+| `D=1` (default) | API read responses (`getRows`, `getRow`) | `DatabaseRelatedRowData<T>` (or `null`) | `DatabaseRelatedRowData<T>[]` |
 | `D=0` | Write operations (`createRow`, `updateRow`) | `string` (ObjectId) | `string[]` (ObjectId array) |
 
 The API resolves relations exactly **1 level deep**. Nested relation fields inside resolved rows remain as raw ObjectId strings, which is why `D=1` is the correct default for read responses.
@@ -1133,7 +1133,7 @@ import {
   Relation,
   RelationMany,
   ResolveRelations,
-  DatabaseRowData,
+  DatabaseRelatedRowData,
 } from '@emd-cloud/sdk'
 
 // Define your collection schemas
@@ -1157,7 +1157,7 @@ interface TournamentSchema {
 const tourDb = emdCloud.database('tours-collection-id')
 const result = await tourDb.getRows<ResolveRelations<TourSchema>>()
 
-// result.data[0].data.tournament is DatabaseRowData<{ title: string; tours: string[]; winner: string | null }>
+// result.data[0].data.tournament is DatabaseRelatedRowData<{ title: string; tours: string[]; winner: string | null }>
 const tournamentTitle = result.data[0].data.tournament.data.title // string
 const tourIds = result.data[0].data.tournament.data.tours          // string[] (depth exhausted)
 
@@ -1180,11 +1180,11 @@ const matchDb = emdCloud.database('matches-collection-id')
 const matches = await matchDb.getRows<ResolveRelations<MatchSchema>>()
 
 const match = matches.data[0].data
-match.next_match_win       // DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
-match.prev_match_win       // DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
+match.next_match_win       // DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
+match.prev_match_win       // DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
 ```
 
-> **Note:** By default, resolved relation rows include the full `DatabaseRowData` shape (`_id`, `data`, `user`, `createdAt`, `updatedAt`). When `hasOptimiseResponse` is enabled in list options, a server-side projection may limit which fields are returned in the related rows.
+> **Note:** By default, resolved relation rows use the `DatabaseRelatedRowData` shape (`_id`, `data`, `createdAt`, `updatedAt`) — `user` and `notice` are never present on relation rows. When `hasOptimiseResponse` is enabled in list options, a server-side projection may further limit which fields are returned.
 
 <br>
 <br>

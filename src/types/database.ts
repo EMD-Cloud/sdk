@@ -1,10 +1,23 @@
+import type { UserData } from './user'
+
 export interface DatabaseRowData<T = Record<string, any>> {
-  _id?: string
+  _id: string
   data: T
-  user?: string
+  user?: Omit<UserData, 'token'>
   notice?: string
-  createdAt?: string
-  updatedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Shape of a resolved relation row returned by the API's `$lookup` pipeline.
+ * Unlike top-level rows, relation rows never include `user` or `notice`.
+ */
+export interface DatabaseRelatedRowData<T = Record<string, any>> {
+  _id: string
+  data: T
+  createdAt: string
+  updatedAt: string
 }
 
 export interface DatabaseQuery {
@@ -69,7 +82,7 @@ export interface DatabaseBulkUpdatePayload {
  *
  * When the API resolves this relation it performs a `$lookup` with `$limit: 1`
  * followed by `$unwind` (`preserveNullAndEmptyArrays: true`), yielding a
- * single {@link DatabaseRowData} object — or `null` when no related row exists.
+ * single {@link DatabaseRelatedRowData} object — or `null` when no related row exists.
  *
  * On the **write path** (create / update), only a plain ObjectId string is stored.
  *
@@ -94,7 +107,7 @@ export type Relation<T> = {
  * Marker type for a has-many relation field (backend `Direction.HasMany`).
  *
  * When the API resolves this relation it performs a `$lookup` **without**
- * `$unwind` or `$limit`, yielding an array of {@link DatabaseRowData} objects.
+ * `$unwind` or `$limit`, yielding an array of {@link DatabaseRelatedRowData} objects.
  * An empty array is returned when no related rows exist.
  *
  * On the **write path** (create / update), an array of ObjectId strings is stored.
@@ -124,11 +137,11 @@ type ResolveField<F, D extends number> =
   F extends Relation<infer R>
     ? D extends 0
       ? string
-      : DatabaseRowData<ResolveRelations<R, DecrementDepth[D]>>
+      : DatabaseRelatedRowData<ResolveRelations<R, DecrementDepth[D]>>
     : F extends RelationMany<infer R>
       ? D extends 0
         ? string[]
-        : DatabaseRowData<ResolveRelations<R, DecrementDepth[D]>>[]
+        : DatabaseRelatedRowData<ResolveRelations<R, DecrementDepth[D]>>[]
       : F
 
 /**
@@ -140,7 +153,7 @@ type ResolveField<F, D extends number> =
  * rows remain as raw ObjectId strings.
  *
  * - **D=1** (default) — matches the API **read** response: direct relations
- *   become full {@link DatabaseRowData} objects (or `null` for has-one),
+ *   become full {@link DatabaseRelatedRowData} objects (or `null` for has-one),
  *   while nested relations collapse to string IDs.
  * - **D=0** — matches the **write** path (`createRow` / `updateRow`): all
  *   relations are plain ObjectId strings (or `string[]` for has-many).
@@ -149,10 +162,10 @@ type ResolveField<F, D extends number> =
  * Handles nullable relations (`Relation<T> | null`) automatically via
  * distributive conditional types.
  *
- * > **Note:** By default the API returns full {@link DatabaseRowData} shape
- * > (`_id`, `data`, `user`, `createdAt`, `updatedAt`) for resolved relations.
- * > When `hasOptimiseResponse` is enabled, a projection may limit the returned
- * > fields.
+ * > **Note:** By default the API returns the {@link DatabaseRelatedRowData} shape
+ * > (`_id`, `data`, `createdAt`, `updatedAt`) for resolved relations — `user`
+ * > and `notice` are never present on relation rows. When `hasOptimiseResponse`
+ * > is enabled, a projection may further limit the returned fields.
  *
  * @example
  * interface TournamentSchema {
@@ -167,7 +180,7 @@ type ResolveField<F, D extends number> =
  *
  * // Depth 1 (default) — API read response
  * const rows = await db.getRows<ResolveRelations<TourSchema>>()
- * rows[0].data.tournament       // DatabaseRowData<{ title: string; tours: string[] }>
+ * rows[0].data.tournament       // DatabaseRelatedRowData<{ title: string; tours: string[] }>
  * rows[0].data.tournament.data.title  // string
  * rows[0].data.tournament.data.tours  // string[]  (depth exhausted)
  *
@@ -183,8 +196,8 @@ type ResolveField<F, D extends number> =
  * }
  *
  * type MatchRead = ResolveRelations<MatchSchema>
- * // next_match_win: DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
- * // prev_match_win: DatabaseRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
+ * // next_match_win: DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
+ * // prev_match_win: DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
  */
 export type ResolveRelations<T, D extends number = 1> = {
   [K in keyof T]: ResolveField<T[K], D>
