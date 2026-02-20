@@ -18,7 +18,7 @@ class Webhook extends BaseModule {
    *                                              or a server error object on failure.
    * @throws {Error} Throws an error if the API request fails.
    * @example
-   * const result = await emdCloud.webhook.call('my_webhook', { method: 'POST', body: { title: 'test' } }, { authType: 'api-token' });
+   * const result = await emdCloud.webhook.call('my_webhook', { method: 'POST', body: { title: 'test' } }, { authType: AuthType.ApiToken });
    * console.log(result);
    */
   async call(

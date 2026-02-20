@@ -826,7 +826,7 @@ await emdCloud.webhook.call(
 		body: { title: 'test' }
 	},
 	{
-		authType: 'api-token'
+		authType: AuthType.ApiToken
 	}
 ); // On success, will return webhook data
 ```
@@ -852,7 +852,10 @@ Each instance is scoped to a specific collection within your app's space, so you
 #### Key Features
 
 - **Human-Readable Names**: Many methods support the `useHumanReadableNames` parameter, which replaces technical column identifiers (e.g., `col_xxx`) with human-readable key names (e.g., `code`, `name`, `id`) in JSON responses.
-- **Save Modes**: Update operations support synchronous (`SYNC`) and asynchronous (`ASYNC`) save modes for different performance requirements.
+- **Save Modes**: Update operations support synchronous and asynchronous save modes via `DatabaseSaveMode.SYNC` / `DatabaseSaveMode.ASYNC` (wire values: `sync` / `async`).
+- **Response Wrapping Control**: All database methods accept `callOptions.ignoreFormatResponse`.  
+  - `false`/omitted (default): SDK returns unwrapped `data`  
+  - `true`: SDK returns full API envelope (`{ success, data, ... }`)
 
 #### Method: `database.getRows`
 
@@ -862,17 +865,27 @@ Retrieves rows from the database collection with optional filtering, sorting, an
 **Parameters:**
 - `options` (object, optional): Query options including:
   - `query` (object, optional): MongoDB-style query object with `$and`, `$or` operators
+  - `orderBy` (string, optional): Compatibility field accepted by gateway schema; current row-list backend sorting is driven by `sort`
   - `sort` (array, optional): Sort configuration `[{column: 'fieldName', sort: 'asc|desc'}]`
   - `limit` (number, optional): Maximum number of rows to return (default: 50)
   - `page` (number, optional): Page number for pagination (default: 0)
   - `search` (string, optional): Text search across collection
+  - `createdAt` (string, optional): Filter rows by creation date
   - `hasOptimiseResponse` (boolean, optional): Optimize response size (default: false)
+  - `ignoreColumns` (string[], optional): Omit specific columns from response payload
   - `useHumanReadableNames` (boolean, optional): Use readable column names (default: false)
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
+
+**Type note:**
+- For typed schemas (`getRows<TSchema>()`), literal `ignoreColumns` values (e.g. `['title']`) narrow the return type automatically.
+- Widened key arrays (e.g. `(keyof TSchema)[]`) keep a safe non-narrowed return type.
 
 **Returns:**  
 Returns a `Promise` that resolves to:
-- Array of rows with count information
+- Unwrapped row array (`DatabaseRowData[]` by default, `OptimisedRowData[]` with `hasOptimiseResponse: true`)
+- Full response envelope when `ignoreFormatResponse: true` (`{ success, data, count, ... }`)
 - Server error
 
 **Example:**
@@ -884,7 +897,7 @@ const result = await usersDb.getRows(
     limit: 20,
     page: 0
   },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -900,18 +913,21 @@ Gets the total count of rows matching the specified query without returning the 
   - `query` (object, optional): MongoDB-style query object
   - `search` (string, optional): Text search across collection
   - `createdAt` (string, optional): Filter by creation date
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
-- Count object with total number
+- Unwrapped count value (`number`)
+- Full response envelope when `ignoreFormatResponse: true` (`{ success, count, data, ... }`)
 - Server error
 
 **Example:**
 ```javascript
 const result = await usersDb.countRows(
   { query: { "$and": [{ "data.status": { "$eq": "active" } }] } },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -926,11 +942,14 @@ Retrieves a single row by its unique identifier.
 - `rowId` (string): The unique ID of the row to retrieve
 - `options` (object, optional): Options for retrieving the row including:
   - `useHumanReadableNames` (boolean, optional): Use readable column names (default: false)
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
-- Single row data object
+- Unwrapped row object
+- Full response envelope when `ignoreFormatResponse: true`
 - Server error
 
 **Example:**
@@ -938,7 +957,7 @@ Returns a `Promise` that resolves to:
 const result = await usersDb.getRow(
   '60a7c8b8f123456789abcdef', 
   { useHumanReadableNames: true },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -955,11 +974,14 @@ Creates a new row in the database collection.
   - `user` (string, optional): User ID to associate with the row
   - `notice` (string, optional): Notice/comment for the operation
   - `useHumanReadableNames` (boolean, optional): Use readable column names in response (default: false)
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
-- Created row data object
+- Unwrapped created row object
+- Full response envelope when `ignoreFormatResponse: true`
 - Server error
 
 **Example:**
@@ -967,7 +989,7 @@ Returns a `Promise` that resolves to:
 const result = await usersDb.createRow(
   { name: 'John Doe', email: 'john@example.com', status: 'active' },
   { notice: 'Created via API' },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -984,13 +1006,16 @@ Updates an existing row in the database collection.
 - `options` (object, optional): Update options including:
   - `user` (string, optional): User ID to associate with the update
   - `notice` (string, optional): Notice/comment for the operation
-  - `saveMode` (string, optional): Save operation mode - 'SYNC' or 'ASYNC' (default: 'SYNC')
+  - `saveMode` (DatabaseSaveMode, optional): Save mode (`DatabaseSaveMode.SYNC` / `DatabaseSaveMode.ASYNC`, wire: `sync` / `async`)
   - `useHumanReadableNames` (boolean, optional): Use readable column names in response (default: false)
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
-- Updated row data object
+- Unwrapped updated row object (`saveMode: ASYNC` returns minimal `{ _id, data }`)
+- Full response envelope when `ignoreFormatResponse: true`
 - Server error
 
 **Example:**
@@ -999,7 +1024,7 @@ const result = await usersDb.updateRow(
   '60a7c8b8f123456789abcdef',
   { status: 'inactive' },
   { notice: 'Deactivated user' },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -1015,7 +1040,9 @@ Updates multiple rows matching the specified query in a single operation.
   - `query` (object): MongoDB-style query to match rows for update
   - `data` (object): Data to update on matching rows
   - `notice` (string): Notice/comment for the bulk operation
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
@@ -1030,7 +1057,7 @@ const result = await usersDb.bulkUpdate(
     data: { status: "active" },
     notice: "Bulk activation of pending users"
   },
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -1043,7 +1070,9 @@ Deletes a single row by its unique identifier.
 
 **Parameters:**
 - `rowId` (string): The unique ID of the row to delete
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
@@ -1052,7 +1081,7 @@ Returns a `Promise` that resolves to:
 
 **Example:**
 ```javascript
-const result = await usersDb.deleteRow('60a7c8b8f123456789abcdef', { authType: 'auth-token' });
+const result = await usersDb.deleteRow('60a7c8b8f123456789abcdef', { authType: AuthType.AuthToken });
 ```
 
 <br>
@@ -1064,7 +1093,9 @@ Deletes multiple rows by their unique identifiers in a single operation.
 
 **Parameters:**
 - `rowIds` (array): Array of row IDs to delete
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
@@ -1075,7 +1106,7 @@ Returns a `Promise` that resolves to:
 ```javascript
 const result = await usersDb.deleteRows(
   ['60a7c8b8f123456789abcdef', '60a7c8b8f123456789abcdeg'],
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 
@@ -1089,7 +1120,9 @@ Triggers a button action on a specific row. This is used for executing custom wo
 **Parameters:**
 - `rowId` (string): The unique ID of the row containing the button
 - `columnId` (string): The ID of the column containing the button to trigger
-- `callOptions` (object): API call options including `authType`
+- `callOptions` (object): API call options including:
+  - `authType` (`AuthType`, optional): `AuthType.AuthToken` | `AuthType.ApiToken`
+  - `ignoreFormatResponse` (boolean, optional)
 
 **Returns:**  
 Returns a `Promise` that resolves to:
@@ -1101,7 +1134,7 @@ Returns a `Promise` that resolves to:
 const result = await ordersDb.triggerButton(
   '60a7c8b8f123456789abcdef',
   'approve-button-column-id',
-  { authType: 'auth-token' }
+  { authType: AuthType.AuthToken }
 );
 ```
 

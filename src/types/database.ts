@@ -66,12 +66,17 @@ export interface DatabaseListOptions {
   search?: string
   limit?: number
   page?: number
+  /**
+   * Compatibility field from the shared gateway list schema.
+   * Current `/database/:id/row/list` sorting is driven by `sort`.
+   */
   orderBy?: string
   sort?: DatabaseSort[]
   query?: DatabaseQuery
   hasOptimiseResponse?: boolean
   useHumanReadableNames?: boolean
   createdAt?: string
+  ignoreColumns?: readonly string[]
 }
 
 export interface DatabaseGetRowOptions {
@@ -258,6 +263,23 @@ type ResolveFieldOptimised<F, D extends number> =
 export type ResolveRelationsOptimised<T, D extends number = 1> = {
   [K in keyof T]: ResolveFieldOptimised<T[K], D>
 }
+
+/**
+ * Conditionally omits keys from a resolved schema based on `ignoreColumns`.
+ *
+ * - `K = never` → no columns ignored, returns `T` unchanged
+ * - `K = string` → generic/widened key type, returns `T` unchanged (avoids over-omitting for broad schemas)
+ * - `K` covers all keys of `T` → returns `T` unchanged (safety fallback for widened key unions)
+ * - `K = 'foo' | 'bar'` → specific literal subset, returns `Omit<T, K>`
+ */
+export type OmitIgnored<T, K extends string> =
+  [K] extends [never]
+    ? T
+    : string extends K
+      ? T
+      : [keyof T & string] extends [K]
+        ? T
+        : Omit<T, Extract<K, keyof T & string>>
 
 /**
  * Convenience type: a database row with relations resolved to depth D.

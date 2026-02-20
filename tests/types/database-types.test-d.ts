@@ -11,11 +11,14 @@ import type {
   DatabaseRelatedRowData,
   DatabaseRowData,
   DatabaseRowResponse,
+  DatabaseRowsResponse,
   DatabaseUpdateOptions,
   DatabaseWriteData,
+  OmitIgnored,
   OptimisedRelatedRowData,
   OptimisedDatabaseEntity,
   OptimisedRowData,
+  OptimisedRowsResponse,
   Relation,
   RelationMany,
   ResolveRelations,
@@ -333,4 +336,89 @@ test('getRows with hasOptimiseResponse returns OptimisedDatabaseEntity without m
   expectTypeOf(optimisedPromise).toEqualTypeOf<
     Promise<OptimisedDatabaseEntity<TourSchema>[] | ServerError>
   >()
+})
+
+test('OmitIgnored utility type works correctly', () => {
+  type T = { title: string; age: number; email: string }
+
+  type NeverCase = Expect<Equal<OmitIgnored<T, never>, T>>
+  type StringCase = Expect<Equal<OmitIgnored<T, string>, T>>
+  type AllKeysCase = Expect<Equal<OmitIgnored<T, 'title' | 'age' | 'email'>, T>>
+  type LiteralCase = Expect<
+    Equal<OmitIgnored<T, 'title'>, Omit<T, 'title'>>
+  >
+  type MultiCase = Expect<
+    Equal<OmitIgnored<T, 'title' | 'email'>, Omit<T, 'title' | 'email'>>
+  >
+
+  assertType<NeverCase>(true)
+  assertType<StringCase>(true)
+  assertType<AllKeysCase>(true)
+  assertType<LiteralCase>(true)
+  assertType<MultiCase>(true)
+})
+
+test('ignoreColumns constrains keys to schema fields', () => {
+  // Valid key accepted
+  db.getRows<TourSchema>({ ignoreColumns: ['title'] })
+
+  // @ts-expect-error invalid key rejected
+  db.getRows<TourSchema>({ ignoreColumns: ['nonexistent'] })
+})
+
+test('getRows return type narrows from literal ignoreColumns with single schema generic', () => {
+  const narrowedPromise = db.getRows<TourSchema>({ ignoreColumns: ['title'] })
+  expectTypeOf(narrowedPromise).toMatchTypeOf<
+    Promise<
+      DatabaseRowData<Omit<ResolveRelations<TourSchema, 1>, 'title'>>[] | ServerError
+    >
+  >()
+
+  const fullNarrowedPromise = db.getRows<TourSchema>(
+    { ignoreColumns: ['title'] },
+    { ignoreFormatResponse: true },
+  )
+  expectTypeOf(fullNarrowedPromise).toMatchTypeOf<
+    Promise<
+      DatabaseRowsResponse<Omit<ResolveRelations<TourSchema, 1>, 'title'>> | ServerError
+    >
+  >()
+})
+
+test('getRows keeps unchanged type for widened ignoreColumns key unions', () => {
+  const dynamicIgnoreColumns: (keyof TourSchema & string)[] = ['title']
+  const promise = db.getRows<TourSchema>({
+    ignoreColumns: dynamicIgnoreColumns,
+  })
+  expectTypeOf(promise).toEqualTypeOf<
+    Promise<DatabaseRowData<ResolveRelations<TourSchema>>[] | ServerError>
+  >()
+})
+
+test('getRows with ignoreColumns + hasOptimiseResponse narrows optimised return type', () => {
+  const optimisedNarrowedPromise = db.getRows<TourSchema>({
+    hasOptimiseResponse: true,
+    ignoreColumns: ['title'],
+  })
+  expectTypeOf(optimisedNarrowedPromise).toMatchTypeOf<
+    Promise<
+      OptimisedRowData<Omit<ResolveRelationsOptimised<TourSchema, 1>, 'title'>>[] | ServerError
+    >
+  >()
+
+  const optimisedFullPromise = db.getRows<TourSchema>(
+    { hasOptimiseResponse: true, ignoreColumns: ['title'] },
+    { ignoreFormatResponse: true },
+  )
+  expectTypeOf(optimisedFullPromise).toMatchTypeOf<
+    Promise<
+      OptimisedRowsResponse<Omit<ResolveRelationsOptimised<TourSchema, 1>, 'title'>> | ServerError
+    >
+  >()
+})
+
+test('ignoreColumns accepts any string when TSchema is Record<string, any>', () => {
+  // Should compile without error when using default generic
+  db.getRows({ ignoreColumns: ['anything'] })
+  db.getRows({ ignoreColumns: ['col1', 'col2', 'col3'] })
 })

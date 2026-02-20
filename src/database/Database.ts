@@ -22,8 +22,14 @@ import type {
   DatabaseWriteData,
   ResolveRelations,
   ResolveRelationsOptimised,
+  OmitIgnored,
 } from 'src/types/database'
 import { DatabaseSaveMode } from 'src/types/database'
+
+type InferIgnoredColumns<TOptions> =
+  TOptions extends { ignoreColumns?: readonly (infer K)[] }
+    ? Extract<K, string>
+    : never
 
 class Database extends BaseModule {
   private readonly collectionId: string
@@ -51,33 +57,112 @@ class Database extends BaseModule {
    *     page: 0,
    *     sort: [{ column: "createdAt", sort: "desc" }]
    *   },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
-  async getRows<TSchema = Record<string, any>>(
-    options: DatabaseListOptions & { hasOptimiseResponse: true },
+  async getRows<
+    TSchema = Record<string, any>,
+    const TOptions extends DatabaseListOptions & {
+      hasOptimiseResponse: true
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    } = DatabaseListOptions & {
+      hasOptimiseResponse: true
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    },
+  >(
+    options: TOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>> | ServerError>
-  async getRows<TSchema = Record<string, any>>(
-    options: DatabaseListOptions & { hasOptimiseResponse: true },
+  ): Promise<
+    | OptimisedRowsResponse<
+        OmitIgnored<
+          ResolveRelationsOptimised<TSchema>,
+          InferIgnoredColumns<TOptions>
+        >
+      >
+    | ServerError
+  >
+  async getRows<
+    TSchema = Record<string, any>,
+    const TOptions extends DatabaseListOptions & {
+      hasOptimiseResponse: true
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    } = DatabaseListOptions & {
+      hasOptimiseResponse: true
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    },
+  >(
+    options: TOptions,
     callOptions?: CallOptions,
-  ): Promise<OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>['data'] | ServerError>
-  async getRows<TSchema = Record<string, any>>(
-    options: DatabaseListOptions,
+  ): Promise<
+    | OptimisedRowsResponse<
+        OmitIgnored<
+          ResolveRelationsOptimised<TSchema>,
+          InferIgnoredColumns<TOptions>
+        >
+      >['data']
+    | ServerError
+  >
+  async getRows<
+    TSchema = Record<string, any>,
+    const TOptions extends DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    } = DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    },
+  >(
+    options: TOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<DatabaseRowsResponse<ResolveRelations<TSchema>> | ServerError>
-  async getRows<TSchema = Record<string, any>>(
-    options?: DatabaseListOptions,
+  ): Promise<
+    | DatabaseRowsResponse<
+        OmitIgnored<ResolveRelations<TSchema>, InferIgnoredColumns<TOptions>>
+      >
+    | ServerError
+  >
+  async getRows<
+    TSchema = Record<string, any>,
+    const TOptions extends DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    } = DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    },
+  >(
+    options?: TOptions,
     callOptions?: CallOptions,
-  ): Promise<DatabaseRowsResponse<ResolveRelations<TSchema>>['data'] | ServerError>
-  async getRows<TSchema = Record<string, any>>(
-    options: DatabaseListOptions = {},
+  ): Promise<
+    | DatabaseRowsResponse<
+        OmitIgnored<ResolveRelations<TSchema>, InferIgnoredColumns<TOptions>>
+      >['data']
+    | ServerError
+  >
+  async getRows<
+    TSchema = Record<string, any>,
+    const TOptions extends DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    } = DatabaseListOptions & {
+      ignoreColumns?: readonly (keyof TSchema & string)[]
+    },
+  >(
+    options: TOptions = {} as TOptions,
     callOptions: CallOptions = {},
   ): Promise<
-    | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>
-    | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>['data']
-    | DatabaseRowsResponse<ResolveRelations<TSchema>>
-    | DatabaseRowsResponse<ResolveRelations<TSchema>>['data']
+    | OptimisedRowsResponse<
+        OmitIgnored<
+          ResolveRelationsOptimised<TSchema>,
+          InferIgnoredColumns<TOptions>
+        >
+      >
+    | OptimisedRowsResponse<
+        OmitIgnored<
+          ResolveRelationsOptimised<TSchema>,
+          InferIgnoredColumns<TOptions>
+        >
+      >['data']
+    | DatabaseRowsResponse<
+        OmitIgnored<ResolveRelations<TSchema>, InferIgnoredColumns<TOptions>>
+      >
+    | DatabaseRowsResponse<
+        OmitIgnored<ResolveRelations<TSchema>, InferIgnoredColumns<TOptions>>
+      >['data']
     | ServerError
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
@@ -107,6 +192,7 @@ class Database extends BaseModule {
       hasOptimiseResponse,
       useHumanReadableNames,
       createdAt,
+      ignoreColumns,
     } = options
 
     const payload: Record<string, any> = {}
@@ -121,10 +207,18 @@ class Database extends BaseModule {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
     if (createdAt !== undefined) payload.createdAt = createdAt
+    if (ignoreColumns !== undefined) payload.ignoreColumns = ignoreColumns
 
     return this.request<
-      | DatabaseRowsResponse<ResolveRelations<TSchema>>
-      | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>
+      | DatabaseRowsResponse<
+          OmitIgnored<ResolveRelations<TSchema>, InferIgnoredColumns<TOptions>>
+        >
+      | OptimisedRowsResponse<
+          OmitIgnored<
+            ResolveRelationsOptimised<TSchema>,
+            InferIgnoredColumns<TOptions>
+          >
+        >
     >(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
@@ -148,7 +242,7 @@ class Database extends BaseModule {
    * @example
    * const result = await database.countRows(
    *   { query: { "$and": [{ "data.status": { "$eq": "active" } }] } },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async countRows(
@@ -217,7 +311,7 @@ class Database extends BaseModule {
    * const result = await database.getRow<TourSchema>(
    *   '60a7c8b8f123456789abcdef',
    *   { useHumanReadableNames: true },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async getRow<TSchema = Record<string, any>>(
@@ -285,7 +379,7 @@ class Database extends BaseModule {
    * const result = await database.createRow(
    *   { title: 'New Task', status: 'pending' },
    *   { notice: 'Created via API' },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async createRow<
@@ -357,7 +451,7 @@ class Database extends BaseModule {
    *   '60a7c8b8f123456789abcdef',
    *   { status: 'completed' },
    *   { notice: 'Updated via API' },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async updateRow<
@@ -491,7 +585,7 @@ class Database extends BaseModule {
    *     data: { "status": "in-progress" },
    *     notice: "Bulk status update"
    *   },
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async bulkUpdate(
@@ -535,7 +629,7 @@ class Database extends BaseModule {
    * @param {CallOptions} callOptions - Additional options for the API call including authentication type
    * @returns {Promise<DatabaseDeleteResponse | ServerError>} A promise that resolves to the delete result or error
    * @example
-   * const result = await database.deleteRow('60a7c8b8f123456789abcdef', { authType: 'auth-token' });
+   * const result = await database.deleteRow('60a7c8b8f123456789abcdef', { authType: AuthType.AuthToken });
    */
   async deleteRow(
     rowId: string,
@@ -584,7 +678,7 @@ class Database extends BaseModule {
    * @example
    * const result = await database.deleteRows(
    *   ['60a7c8b8f123456789abcdef', '60a7c8b8f123456789abcdeg'],
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async deleteRows(
@@ -636,7 +730,7 @@ class Database extends BaseModule {
    * const result = await database.triggerButton(
    *   '60a7c8b8f123456789abcdef',
    *   'approve-button-column-id',
-   *   { authType: 'auth-token' }
+   *   { authType: AuthType.AuthToken }
    * );
    */
   async triggerButton(

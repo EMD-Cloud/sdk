@@ -57,7 +57,7 @@ describe('Database', () => {
       await db.getRows({ createdAt: '2024-01-01' })
 
       const [, requestInit] = mockApiRequest.mock.calls[0]
-      const payload = JSON.parse(String(requestInit.body))
+      const payload = JSON.parse(String(requestInit?.body))
       expect(payload.createdAt).toBe('2024-01-01')
     })
 
@@ -67,8 +67,28 @@ describe('Database', () => {
       await db.getRows({ limit: 10 })
 
       const [, requestInit] = mockApiRequest.mock.calls[0]
-      const payload = JSON.parse(String(requestInit.body))
+      const payload = JSON.parse(String(requestInit?.body))
       expect(payload).not.toHaveProperty('createdAt')
+    })
+
+    it('forwards ignoreColumns to request payload when provided', async () => {
+      mockApiRequest.mockResolvedValue(rawResponse as any)
+
+      await db.getRows({ ignoreColumns: ['col1', 'col2'] })
+
+      const [, requestInit] = mockApiRequest.mock.calls[0]
+      const payload = JSON.parse(String(requestInit?.body))
+      expect(payload.ignoreColumns).toEqual(['col1', 'col2'])
+    })
+
+    it('omits ignoreColumns from request payload when not provided', async () => {
+      mockApiRequest.mockResolvedValue(rawResponse as any)
+
+      await db.getRows({ limit: 10 })
+
+      const [, requestInit] = mockApiRequest.mock.calls[0]
+      const payload = JSON.parse(String(requestInit?.body))
+      expect(payload).not.toHaveProperty('ignoreColumns')
     })
 
     it('supports optimised response mode and keeps unwrapped data', async () => {
