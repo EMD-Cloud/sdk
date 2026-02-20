@@ -1,6 +1,6 @@
 {
   "name": "@emd-cloud/sdk",
-  "version": "1.13.2",
+  "version": "1.14.0",
   "type": "module",
   "types": "dist/index.d.ts",
   "description": "Use EMD Cloud SDK to integrate with your Node.js applications",
