@@ -11,11 +11,42 @@ export interface DatabaseRowData<T = Record<string, any>> {
 
 /**
  * Shape of a resolved relation row returned by the API's `$lookup` pipeline.
- * Unlike top-level rows, relation rows never include `user` or `notice`.
+ *
+ * In the default (non-optimised) response, related rows **do** include `user`
+ * and `notice` when present — the same shape as top-level rows. When
+ * `hasOptimiseResponse` is enabled, use {@link OptimisedRelatedRowData} instead.
  */
 export interface DatabaseRelatedRowData<T = Record<string, any>> {
   _id: string
   data: T
+  user?: Omit<UserData, 'token'> | UserData["_id"]
+  notice?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Shape of a resolved relation row when `hasOptimiseResponse: true`.
+ *
+ * The API strips all fields except `_id` and (optionally) a partial `data`
+ * projection (typically just the primary column). For some relations the
+ * backend returns only `_id` with no `data` key.
+ */
+export interface OptimisedRelatedRowData<T = Record<string, any>> {
+  _id: string
+  data?: Partial<T>
+}
+
+/**
+ * Top-level row shape when `hasOptimiseResponse: true`.
+ *
+ * Same as {@link DatabaseRowData} but without the `notice` field, which is
+ * stripped by the optimised response pipeline.
+ */
+export interface OptimisedRowData<T = Record<string, any>> {
+  _id: string
+  data: T
+  user?: Omit<UserData, 'token'>
   createdAt: string
   updatedAt: string
 }
@@ -54,8 +85,10 @@ export interface DatabaseCountOptions {
 }
 
 export enum DatabaseSaveMode {
-  SYNC = 'SYNC',
-  ASYNC = 'ASYNC',
+  /** Synchronous save mode (backend wire value: `sync`). */
+  SYNC = 'sync',
+  /** Asynchronous save mode (backend wire value: `async`). */
+  ASYNC = 'async',
 }
 
 export interface DatabaseCreateOptions {
@@ -163,9 +196,9 @@ type ResolveField<F, D extends number> =
  * distributive conditional types.
  *
  * > **Note:** By default the API returns the {@link DatabaseRelatedRowData} shape
- * > (`_id`, `data`, `createdAt`, `updatedAt`) for resolved relations — `user`
- * > and `notice` are never present on relation rows. When `hasOptimiseResponse`
- * > is enabled, a projection may further limit the returned fields.
+ * > for resolved relations, which **includes** optional `user` and `notice`
+ * > fields. When `hasOptimiseResponse` is enabled, related rows are reduced to
+ * > the {@link OptimisedRelatedRowData} shape (`_id` and optional partial `data`).
  *
  * @example
  * interface TournamentSchema {
@@ -178,13 +211,13 @@ type ResolveField<F, D extends number> =
  *   title: string
  * }
  *
- * // Depth 1 (default) — API read response
- * const rows = await db.getRows<ResolveRelations<TourSchema>>()
+ * // Read methods auto-resolve at D=1 — just pass your raw schema type:
+ * const rows = await db.getRows<TourSchema>()
  * rows[0].data.tournament       // DatabaseRelatedRowData<{ title: string; tours: string[] }>
  * rows[0].data.tournament.data.title  // string
  * rows[0].data.tournament.data.tours  // string[]  (depth exhausted)
  *
- * // Depth 0 — flat IDs, useful for createRow/updateRow input
+ * // Depth 0 — flat IDs, used internally by createRow/updateRow input
  * type TourFlat = ResolveRelations<TourSchema, 0>
  * // { tournament: string; title: string }
  *
@@ -201,6 +234,29 @@ type ResolveField<F, D extends number> =
  */
 export type ResolveRelations<T, D extends number = 1> = {
   [K in keyof T]: ResolveField<T[K], D>
+}
+
+/** Resolves a single field using optimised relation shapes. */
+type ResolveFieldOptimised<F, D extends number> =
+  F extends Relation<infer R>
+    ? D extends 0
+      ? string
+      : OptimisedRelatedRowData<ResolveRelationsOptimised<R, DecrementDepth[D]>>
+    : F extends RelationMany<infer R>
+      ? D extends 0
+        ? string[]
+        : OptimisedRelatedRowData<
+            ResolveRelationsOptimised<R, DecrementDepth[D]>
+          >[]
+      : F
+
+/**
+ * Like {@link ResolveRelations} but maps relation markers to
+ * {@link OptimisedRelatedRowData} — the stripped shape returned when
+ * `hasOptimiseResponse: true`.
+ */
+export type ResolveRelationsOptimised<T, D extends number = 1> = {
+  [K in keyof T]: ResolveFieldOptimised<T[K], D>
 }
 
 /**
@@ -233,6 +289,26 @@ export type DatabaseEntity<T, D extends number = 1> = DatabaseRowData<
  */
 export type DatabaseWriteData<T> = ResolveRelations<T, 0>
 
+/**
+ * Convenience type: an optimised database row with relations resolved to depth D.
+ *
+ * Composes {@link OptimisedRowData} with {@link ResolveRelationsOptimised}.
+ */
+export type OptimisedDatabaseEntity<T, D extends number = 1> = OptimisedRowData<
+  ResolveRelationsOptimised<T, D>
+>
+
+/**
+ * Row shape returned by `updateRow` when `saveMode: ASYNC`.
+ *
+ * The backend acknowledges the write immediately with only `_id` and `data`,
+ * without waiting for the full pipeline (triggers, computed columns, etc.).
+ */
+export interface DatabaseAsyncRowData<T = Record<string, any>> {
+  _id: string
+  data: T
+}
+
 export interface DatabaseRowResponse<T = Record<string, any>> {
   success: true
   data: DatabaseRowData<T>
@@ -242,6 +318,17 @@ export interface DatabaseRowsResponse<T = Record<string, any>> {
   success: true
   data: DatabaseRowData<T>[]
   count: number
+}
+
+export interface OptimisedRowsResponse<T = Record<string, any>> {
+  success: true
+  data: OptimisedRowData<T>[]
+  count: number
+}
+
+export interface DatabaseAsyncRowResponse<T = Record<string, any>> {
+  success: true
+  data: DatabaseAsyncRowData<T>
 }
 
 export interface DatabaseCountResponse {

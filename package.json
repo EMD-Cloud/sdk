@@ -23,6 +23,7 @@
   ],
   "scripts": {
     "test": "vitest run",
+    "test:types": "vitest run --typecheck",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "build": "rimraf dist && rollup -c rollup.config.js",

@@ -1115,16 +1115,16 @@ The SDK provides generic marker types for typing relation columns in your databa
 
 - `Relation<T>` — marks a **has-one** relation field (single row reference)
 - `RelationMany<T>` — marks a **has-many** relation field (multiple row references)
-- `ResolveRelations<T, D>` — transforms relation markers into their resolved types based on depth `D`
+- `ResolveRelations<T, D>` — transforms relation markers into their resolved types based on depth `D` (used internally by the SDK; you rarely need to call it directly)
 
-**Depth behavior:**
+**Depth behavior (applied automatically by the SDK):**
 
 | Depth | Use case | `Relation<T>` becomes | `RelationMany<T>` becomes |
 |-------|----------|----------------------|--------------------------|
 | `D=1` (default) | API read responses (`getRows`, `getRow`) | `DatabaseRelatedRowData<T>` (or `null`) | `DatabaseRelatedRowData<T>[]` |
 | `D=0` | Write operations (`createRow`, `updateRow`) | `string` (ObjectId) | `string[]` (ObjectId array) |
 
-The API resolves relations exactly **1 level deep**. Nested relation fields inside resolved rows remain as raw ObjectId strings, which is why `D=1` is the correct default for read responses.
+The API resolves relations exactly **1 level deep**. Nested relation fields inside resolved rows remain as raw ObjectId strings. All database methods auto-resolve relation markers — just pass your raw schema type.
 
 **Example — defining schemas and using relation types:**
 
@@ -1132,7 +1132,6 @@ The API resolves relations exactly **1 level deep**. Nested relation fields insi
 import {
   Relation,
   RelationMany,
-  ResolveRelations,
   DatabaseRelatedRowData,
 } from '@emd-cloud/sdk'
 
@@ -1153,20 +1152,19 @@ interface TournamentSchema {
   winner: Relation<TeamSchema> | null // nullable relation
 }
 
-// --- Reading rows (D=1, default) ---
+// --- Reading rows (auto-resolved at D=1) ---
+// Just pass your raw schema type — the SDK wraps it with ResolveRelations automatically
 const tourDb = emdCloud.database('tours-collection-id')
-const result = await tourDb.getRows<ResolveRelations<TourSchema>>()
+const result = await tourDb.getRows<TourSchema>()
 
-// result.data[0].data.tournament is DatabaseRelatedRowData<{ title: string; tours: string[]; winner: string | null }>
-const tournamentTitle = result.data[0].data.tournament.data.title // string
-const tourIds = result.data[0].data.tournament.data.tours          // string[] (depth exhausted)
+// result[0].data.tournament is DatabaseRelatedRowData<{ title: string; tours: string[]; winner: string | null }>
+const tournamentTitle = result[0].data.tournament.data.title // string
+const tourIds = result[0].data.tournament.data.tours          // string[] (depth exhausted)
 
-// --- Writing rows (D=0) ---
-type TourWrite = ResolveRelations<TourSchema, 0>
-// { title: string; tournament: string }
-
-await tourDb.createRow(
-  { title: 'Round 1', tournament: '507f1f77bcf86cd799439011' } satisfies TourWrite
+// --- Writing rows (auto-resolved at D=0) ---
+// createRow/updateRow also auto-resolve — just pass your raw schema type
+await tourDb.createRow<TourSchema>(
+  { title: 'Round 1', tournament: '507f1f77bcf86cd799439011' }
 )
 
 // --- Self-referencing relations (e.g. tournament bracket) ---
@@ -1177,42 +1175,73 @@ interface MatchSchema {
 }
 
 const matchDb = emdCloud.database('matches-collection-id')
-const matches = await matchDb.getRows<ResolveRelations<MatchSchema>>()
+const matches = await matchDb.getRows<MatchSchema>()
 
-const match = matches.data[0].data
+const match = matches[0].data
 match.next_match_win       // DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }> | null
 match.prev_match_win       // DatabaseRelatedRowData<{ name: string; next_match_win: string | null; prev_match_win: string[] }>[]
 ```
 
-**Convenience types:**
+**`DatabaseEntity<T>` — the main type for your collections:**
 
-The SDK also provides shorthand types to reduce boilerplate when typing entities and write payloads:
-
-- `DatabaseEntity<T>` — equivalent to `DatabaseRowData<ResolveRelations<T>>` (a full row with resolved relations)
-- `DatabaseWriteData<T>` — equivalent to `ResolveRelations<T, 0>` (flat ID shapes for `createRow` / `updateRow`)
+Define it once per collection and use it everywhere — for state, function parameters, component props, etc. The SDK methods resolve relation types automatically from your raw schema generic. Option-specific overloads are narrow when options are literal (`{ hasOptimiseResponse: true }`, `{ saveMode: DatabaseSaveMode.ASYNC }`); broadly typed options return a safe union.
 
 ```typescript
 import {
   DatabaseEntity,
-  DatabaseWriteData,
+  DatabaseUpdateOptions,
+  DatabaseSaveMode,
+  Relation,
+  RelationMany,
 } from '@emd-cloud/sdk'
 
-// Before
-type Tournament = DatabaseRowData<ResolveRelations<TournamentSchema>>
+// 1. Define your schemas
+interface TourSchema {
+  title: string
+  tournament: Relation<TournamentSchema>
+}
 
-// After
+interface TournamentSchema {
+  title: string
+  tours: RelationMany<TourSchema>
+  winner: Relation<TeamSchema> | null
+}
+
+// 2. Define entity types — one line per collection
 type Tournament = DatabaseEntity<TournamentSchema>
+type Tour = DatabaseEntity<TourSchema>
 
-// Write payload with flat ObjectId strings
-type TourPayload = DatabaseWriteData<TourSchema>
-// { title: string; tournament: string }
+// 3. Use them everywhere
+function renderTournament(tournament: Tournament) {
+  tournament._id                          // string
+  tournament.data.title                   // string
+  tournament.data.tours                   // DatabaseRelatedRowData<...>[]
+  tournament.data.tours[0].data.title     // string
+  tournament.data.tours[0].data.tournament // string (depth exhausted)
+  tournament.createdAt                    // string
+}
 
-await tourDb.createRow(
-  { title: 'Round 1', tournament: '507f1f77bcf86cd799439011' } satisfies TourPayload
-)
+// SDK methods auto-resolve — results are assignable to your entity type
+const tours: Tour[] = await tourDb.getRows<TourSchema>()
+const tour: Tour = await tourDb.getRow<TourSchema>('row-id')
+
+// Write methods auto-resolve too — relations become string IDs
+await tourDb.createRow<TourSchema>({
+  title: 'Round 1',
+  tournament: '507f1f77bcf86cd799439011',
+})
+
+// Literal options select narrow overloads:
+const optimised = await tourDb.getRows<TourSchema>({ hasOptimiseResponse: true })
+// optimised[0] is OptimisedRowData<...>
+
+// Broadly typed options return a safe union:
+const updateOptions: DatabaseUpdateOptions = { saveMode: DatabaseSaveMode.ASYNC }
+const updated = await tourDb.updateRow<TourSchema>('row-id', { title: 'Round 2' }, updateOptions)
+// updated is DatabaseRowData<...> | DatabaseAsyncRowData<...>
 ```
 
-> **Note:** By default, resolved relation rows use the `DatabaseRelatedRowData` shape (`_id`, `data`, `createdAt`, `updatedAt`) — `user` and `notice` are never present on relation rows. When `hasOptimiseResponse` is enabled in list options, a server-side projection may further limit which fields are returned.
+> **Note:** The SDK also exports `DatabaseWriteData<T>`, `OptimisedDatabaseEntity<T>`, and `ResolveRelations<T, D>` for advanced use cases, but you typically don't need them — the SDK methods handle the type resolution based on the options you pass.
 
 <br>
 <br>

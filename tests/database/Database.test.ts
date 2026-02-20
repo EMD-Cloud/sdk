@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Database } from 'src/database/Database'
+import { DatabaseSaveMode } from 'src/types/database'
 import { createAppOptions } from '../helpers'
 
 vi.mock('src/utils/fetch', () => ({
@@ -48,6 +49,42 @@ describe('Database', () => {
         'https://api.test.local/api/test-app/database/test-collection/row',
         expect.any(Object),
       )
+    })
+
+    it('forwards createdAt to request payload when provided', async () => {
+      mockApiRequest.mockResolvedValue(rawResponse as any)
+
+      await db.getRows({ createdAt: '2024-01-01' })
+
+      const [, requestInit] = mockApiRequest.mock.calls[0]
+      const payload = JSON.parse(String(requestInit.body))
+      expect(payload.createdAt).toBe('2024-01-01')
+    })
+
+    it('omits createdAt from request payload when not provided', async () => {
+      mockApiRequest.mockResolvedValue(rawResponse as any)
+
+      await db.getRows({ limit: 10 })
+
+      const [, requestInit] = mockApiRequest.mock.calls[0]
+      const payload = JSON.parse(String(requestInit.body))
+      expect(payload).not.toHaveProperty('createdAt')
+    })
+
+    it('supports optimised response mode and keeps unwrapped data', async () => {
+      const rawOptimisedResponse = {
+        success: true,
+        data: [{ _id: 'row1', data: { title: 'Test' } }],
+        count: 1,
+      }
+      mockApiRequest.mockResolvedValue(rawOptimisedResponse as any)
+
+      const result = await db.getRows({
+        hasOptimiseResponse: true,
+        limit: 10,
+      })
+
+      expect(result).toEqual([{ _id: 'row1', data: { title: 'Test' } }])
     })
   })
 
@@ -129,6 +166,43 @@ describe('Database', () => {
 
       const result = await db.updateRow('row1', { title: 'Updated' }, {}, { ignoreFormatResponse: true })
       expect(result).toEqual(rawResponse)
+    })
+
+    it('sends lowercase saveMode and returns minimal async data when saveMode=ASYNC', async () => {
+      const rawAsyncResponse = {
+        success: true,
+        data: { _id: 'row1', data: { title: 'Updated' } },
+      }
+      mockApiRequest.mockResolvedValue(rawAsyncResponse as any)
+
+      const result = await db.updateRow(
+        'row1',
+        { title: 'Updated' },
+        { saveMode: DatabaseSaveMode.ASYNC },
+      )
+
+      expect(result).toEqual(rawAsyncResponse.data)
+
+      const [, requestInit] = mockApiRequest.mock.calls[0]
+      const payload = JSON.parse(String(requestInit.body))
+      expect(payload.saveMode).toBe('async')
+    })
+
+    it('returns full async response with ignoreFormatResponse: true', async () => {
+      const rawAsyncResponse = {
+        success: true,
+        data: { _id: 'row1', data: { title: 'Updated' } },
+      }
+      mockApiRequest.mockResolvedValue(rawAsyncResponse as any)
+
+      const result = await db.updateRow(
+        'row1',
+        { title: 'Updated' },
+        { saveMode: DatabaseSaveMode.ASYNC },
+        { ignoreFormatResponse: true },
+      )
+
+      expect(result).toEqual(rawAsyncResponse)
     })
   })
 

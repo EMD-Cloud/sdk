@@ -17,7 +17,13 @@ import type {
   DatabaseBulkResponse,
   DatabaseDeleteResponse,
   DatabaseTriggerResponse,
+  OptimisedRowsResponse,
+  DatabaseAsyncRowResponse,
+  DatabaseWriteData,
+  ResolveRelations,
+  ResolveRelationsOptimised,
 } from 'src/types/database'
+import { DatabaseSaveMode } from 'src/types/database'
 
 class Database extends BaseModule {
   private readonly collectionId: string
@@ -30,11 +36,15 @@ class Database extends BaseModule {
   /**
    * Retrieves rows from the database collection with optional filtering, sorting, and pagination.
    *
+   * Relations in `TSchema` are auto-resolved: `Relation<T>` → `DatabaseRelatedRowData<T>`,
+   * `RelationMany<T>` → `DatabaseRelatedRowData<T>[]`. When `hasOptimiseResponse: true`,
+   * relations resolve to `OptimisedRelatedRowData` instead.
+   *
    * @param {DatabaseListOptions} options - Options for retrieving rows including query, sort, pagination
    * @param {CallOptions} callOptions - Additional options for the API call including authentication type
    * @returns {Promise<DatabaseRowsResponse | ServerError>} A promise that resolves to the rows data or error
    * @example
-   * const result = await database.getRows(
+   * const result = await database.getRows<TourSchema>(
    *   {
    *     query: { "$and": [{ "data.status": { "$eq": "active" } }] },
    *     limit: 20,
@@ -44,19 +54,31 @@ class Database extends BaseModule {
    *   { authType: 'auth-token' }
    * );
    */
-  async getRows<T = Record<string, any>>(
+  async getRows<TSchema = Record<string, any>>(
+    options: DatabaseListOptions & { hasOptimiseResponse: true },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>> | ServerError>
+  async getRows<TSchema = Record<string, any>>(
+    options: DatabaseListOptions & { hasOptimiseResponse: true },
+    callOptions?: CallOptions,
+  ): Promise<OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>['data'] | ServerError>
+  async getRows<TSchema = Record<string, any>>(
     options: DatabaseListOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<DatabaseRowsResponse<T> | ServerError>
-  async getRows<T = Record<string, any>>(
+  ): Promise<DatabaseRowsResponse<ResolveRelations<TSchema>> | ServerError>
+  async getRows<TSchema = Record<string, any>>(
     options?: DatabaseListOptions,
     callOptions?: CallOptions,
-  ): Promise<DatabaseRowsResponse<T>['data'] | ServerError>
-  async getRows<T = Record<string, any>>(
+  ): Promise<DatabaseRowsResponse<ResolveRelations<TSchema>>['data'] | ServerError>
+  async getRows<TSchema = Record<string, any>>(
     options: DatabaseListOptions = {},
     callOptions: CallOptions = {},
   ): Promise<
-    DatabaseRowsResponse<T> | DatabaseRowsResponse<T>['data'] | ServerError
+    | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>
+    | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>['data']
+    | DatabaseRowsResponse<ResolveRelations<TSchema>>
+    | DatabaseRowsResponse<ResolveRelations<TSchema>>['data']
+    | ServerError
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -84,6 +106,7 @@ class Database extends BaseModule {
       query,
       hasOptimiseResponse,
       useHumanReadableNames,
+      createdAt,
     } = options
 
     const payload: Record<string, any> = {}
@@ -97,8 +120,12 @@ class Database extends BaseModule {
       payload.hasOptimiseResponse = hasOptimiseResponse
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
+    if (createdAt !== undefined) payload.createdAt = createdAt
 
-    return this.request<DatabaseRowsResponse<T>>(
+    return this.request<
+      | DatabaseRowsResponse<ResolveRelations<TSchema>>
+      | OptimisedRowsResponse<ResolveRelationsOptimised<TSchema>>
+    >(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'POST',
@@ -179,33 +206,38 @@ class Database extends BaseModule {
   /**
    * Retrieves a single row by its ID.
    *
+   * Relations in `TSchema` are auto-resolved: `Relation<T>` → `DatabaseRelatedRowData<T>`,
+   * `RelationMany<T>` → `DatabaseRelatedRowData<T>[]`.
+   *
    * @param {string} rowId - The ID of the row to retrieve
    * @param {DatabaseGetRowOptions} options - Options for retrieving the row
    * @param {CallOptions} callOptions - Additional options for the API call including authentication type
    * @returns {Promise<DatabaseRowResponse | ServerError>} A promise that resolves to the row data or error
    * @example
-   * const result = await database.getRow(
+   * const result = await database.getRow<TourSchema>(
    *   '60a7c8b8f123456789abcdef',
    *   { useHumanReadableNames: true },
    *   { authType: 'auth-token' }
    * );
    */
-  async getRow<T = Record<string, any>>(
+  async getRow<TSchema = Record<string, any>>(
     rowId: string,
     options: DatabaseGetRowOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<DatabaseRowResponse<T> | ServerError>
-  async getRow<T = Record<string, any>>(
+  ): Promise<DatabaseRowResponse<ResolveRelations<TSchema>> | ServerError>
+  async getRow<TSchema = Record<string, any>>(
     rowId: string,
     options?: DatabaseGetRowOptions,
     callOptions?: CallOptions,
-  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
-  async getRow<T = Record<string, any>>(
+  ): Promise<DatabaseRowResponse<ResolveRelations<TSchema>>['data'] | ServerError>
+  async getRow<TSchema = Record<string, any>>(
     rowId: string,
     options: DatabaseGetRowOptions = {},
     callOptions: CallOptions = {},
   ): Promise<
-    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+    | DatabaseRowResponse<ResolveRelations<TSchema>>
+    | DatabaseRowResponse<ResolveRelations<TSchema>>['data']
+    | ServerError
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -230,7 +262,7 @@ class Database extends BaseModule {
       ? `?useHumanReadableNames=${useHumanReadableNames}`
       : ''
 
-    return this.request<DatabaseRowResponse<T>>(
+    return this.request<DatabaseRowResponse<ResolveRelations<TSchema>>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row/${rowId}${queryParams}`,
       {
         method: 'GET',
@@ -245,7 +277,7 @@ class Database extends BaseModule {
   /**
    * Creates a new row in the database collection.
    *
-   * @param {Record<string, any>} rowData - The data for the new row
+   * @param {DatabaseWriteData<TSchema>} rowData - The data for the new row
    * @param {DatabaseCreateOptions} options - Additional options for creating the row
    * @param {CallOptions} callOptions - Additional options for the API call including authentication type
    * @returns {Promise<DatabaseRowResponse | ServerError>} A promise that resolves to the created row or error
@@ -256,22 +288,31 @@ class Database extends BaseModule {
    *   { authType: 'auth-token' }
    * );
    */
-  async createRow<T = Record<string, any>>(
-    rowData: Record<string, any>,
+  async createRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+  >(
+    rowData: DatabaseWriteData<TSchema>,
     options: DatabaseCreateOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<DatabaseRowResponse<T> | ServerError>
-  async createRow<T = Record<string, any>>(
-    rowData: Record<string, any>,
+  ): Promise<DatabaseRowResponse<TRead> | ServerError>
+  async createRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+  >(
+    rowData: DatabaseWriteData<TSchema>,
     options?: DatabaseCreateOptions,
     callOptions?: CallOptions,
-  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
-  async createRow<T = Record<string, any>>(
-    rowData: Record<string, any>,
+  ): Promise<DatabaseRowResponse<TRead>['data'] | ServerError>
+  async createRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+  >(
+    rowData: DatabaseWriteData<TSchema>,
     options: DatabaseCreateOptions = {},
     callOptions: CallOptions = {},
   ): Promise<
-    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+    DatabaseRowResponse<TRead> | DatabaseRowResponse<TRead>['data'] | ServerError
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -289,7 +330,7 @@ class Database extends BaseModule {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
 
-    return this.request<DatabaseRowResponse<T>>(
+    return this.request<DatabaseRowResponse<TRead>>(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'PUT',
@@ -307,7 +348,7 @@ class Database extends BaseModule {
    * Updates an existing row in the database collection.
    *
    * @param {string} rowId - The ID of the row to update
-   * @param {Record<string, any>} rowData - The data to update
+   * @param {Partial<DatabaseWriteData<TSchema>>} rowData - The data to update
    * @param {DatabaseUpdateOptions} options - Additional options for updating the row
    * @param {CallOptions} callOptions - Additional options for the API call including authentication type
    * @returns {Promise<DatabaseRowResponse | ServerError>} A promise that resolves to the updated row or error
@@ -319,25 +360,89 @@ class Database extends BaseModule {
    *   { authType: 'auth-token' }
    * );
    */
-  async updateRow<T = Record<string, any>>(
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
     rowId: string,
-    rowData: Record<string, any>,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
+    options: DatabaseUpdateOptions & { saveMode: DatabaseSaveMode.ASYNC },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseAsyncRowResponse<TAsyncData> | ServerError>
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
+    rowId: string,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
+    options: DatabaseUpdateOptions & { saveMode: DatabaseSaveMode.ASYNC },
+    callOptions?: CallOptions,
+  ): Promise<DatabaseAsyncRowResponse<TAsyncData>['data'] | ServerError>
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
+    rowId: string,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
+    options: DatabaseUpdateOptions & { saveMode?: DatabaseSaveMode.SYNC },
+    callOptions: CallOptions & { ignoreFormatResponse: true },
+  ): Promise<DatabaseRowResponse<TRead> | ServerError>
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
+    rowId: string,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
+    options?: DatabaseUpdateOptions & { saveMode?: DatabaseSaveMode.SYNC },
+    callOptions?: CallOptions,
+  ): Promise<DatabaseRowResponse<TRead>['data'] | ServerError>
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
+    rowId: string,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
     options: DatabaseUpdateOptions,
     callOptions: CallOptions & { ignoreFormatResponse: true },
-  ): Promise<DatabaseRowResponse<T> | ServerError>
-  async updateRow<T = Record<string, any>>(
+  ): Promise<
+    | DatabaseRowResponse<TRead>
+    | DatabaseAsyncRowResponse<TAsyncData>
+    | ServerError
+  >
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
     rowId: string,
-    rowData: Record<string, any>,
-    options?: DatabaseUpdateOptions,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
+    options: DatabaseUpdateOptions,
     callOptions?: CallOptions,
-  ): Promise<DatabaseRowResponse<T>['data'] | ServerError>
-  async updateRow<T = Record<string, any>>(
+  ): Promise<
+    | DatabaseRowResponse<TRead>['data']
+    | DatabaseAsyncRowResponse<TAsyncData>['data']
+    | ServerError
+  >
+  async updateRow<
+    TSchema = Record<string, any>,
+    TRead = ResolveRelations<TSchema>,
+    TAsyncData = Partial<DatabaseWriteData<TSchema>>,
+  >(
     rowId: string,
-    rowData: Record<string, any>,
+    rowData: Partial<DatabaseWriteData<TSchema>>,
     options: DatabaseUpdateOptions = {},
     callOptions: CallOptions = {},
   ): Promise<
-    DatabaseRowResponse<T> | DatabaseRowResponse<T>['data'] | ServerError
+    | DatabaseAsyncRowResponse<TAsyncData>
+    | DatabaseAsyncRowResponse<TAsyncData>['data']
+    | DatabaseRowResponse<TRead>
+    | DatabaseRowResponse<TRead>['data']
+    | ServerError
   > {
     const { apiUrl, app } = this.applicationOptions.getOptions()
 
@@ -357,7 +462,9 @@ class Database extends BaseModule {
     if (useHumanReadableNames !== undefined)
       payload.useHumanReadableNames = useHumanReadableNames
 
-    return this.request<DatabaseRowResponse<T>>(
+    return this.request<
+      DatabaseRowResponse<TRead> | DatabaseAsyncRowResponse<TAsyncData>
+    >(
       `${apiUrl}/api/${app}/database/${this.collectionId}/row`,
       {
         method: 'PUT',

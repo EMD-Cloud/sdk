@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Build & Development
 - `npm run build` - Clean build with TypeScript compilation and Rollup bundling (outputs to dist/)
+- `npm test` - Run runtime/unit tests
+- `npm run test:types` - Run Vitest type tests (`*.test-d.ts`)
 - `npm run prettier:formatting` - Format all source code with Prettier
-- **Note**: No test command implemented - test script returns error code 1
 
 ### Linting & Type Checking
 - Run ESLint directly: `npx eslint src/`
@@ -50,7 +51,8 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
   - **Abort capability**: Cancel in-progress uploads programmatically
 - **Database collections**: Each Database instance is scoped to a specific collection within the app's space - create multiple instances for different collections
 - **MongoDB-style queries**: Database module supports complex filtering with `$and`, `$or`, and comparison operators
-- **Relation type resolution**: API resolves relations 1 level deep via `$lookup`. `Relation<T>` → single `DatabaseRelatedRowData` or null (`Direction.HasOne`), `RelationMany<T>` → `DatabaseRelatedRowData` array (`Direction.HasMany`). Resolved relation rows never include `user` or `notice`. `ResolveRelations<T>` provides compile-time accuracy for read responses (D=1) and write payloads (D=0). Supports nullable relations (`Relation<T> | null`) and self-referencing schemas.
+- **Relation type resolution**: API resolves relations 1 level deep via `$lookup`. `Relation<T>` → single `DatabaseRelatedRowData` or null (`Direction.HasOne`), `RelationMany<T>` → `DatabaseRelatedRowData` array (`Direction.HasMany`). In the default (non-optimised) response, resolved relation rows include optional `user` and `notice` fields. When `hasOptimiseResponse: true`, related rows are stripped to `OptimisedRelatedRowData` (`_id` and optional partial `data` projection). `ResolveRelations<T>` provides compile-time accuracy for read responses (D=1) and write payloads (D=0). `ResolveRelationsOptimised<T>` maps relations to `OptimisedRelatedRowData` for optimised responses. Supports nullable relations (`Relation<T> | null`) and self-referencing schemas.
+- **Auto-resolved read methods**: `getRows<TSchema>()` and `getRow<TSchema>()` automatically wrap return types with `ResolveRelations<TSchema>` (or `ResolveRelationsOptimised<TSchema>` for optimised responses). Users pass their raw schema type (e.g. `getRows<TourSchema>()`) — no manual `ResolveRelations<>` wrapping needed. This matches the write methods (`createRow`, `updateRow`) which already auto-resolve.
 - **Chat functionality**: Two-part system for chat communication:
   - **Chat REST API** (`chat`): Manage channels and messages via HTTP (create channels, send messages, list conversations)
   - **ChatWebSocket** (`chatWebSocket()`): Real-time messaging via WebSocket with event-driven architecture
@@ -95,15 +97,22 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - `UploadCallbacks`: Event handlers interface (onProgress, onSuccess, onError)
 - `StartUploadResponse`: Response from upload initiation (uploadId, file)
 - `DatabaseRowData<T>`: Top-level database row structure — `_id`, `data`, `createdAt`, `updatedAt` are required; `user` (typed as `Omit<UserData, 'token'>`) and `notice` are optional
-- `DatabaseRelatedRowData<T>`: Resolved relation row shape (`_id`, `data`, `createdAt`, `updatedAt`) — never includes `user` or `notice`
+- `DatabaseRelatedRowData<T>`: Resolved relation row shape — includes `_id`, `data`, `createdAt`, `updatedAt`, and optional `user`/`notice` fields
+- `OptimisedRelatedRowData<T>`: Stripped relation row when `hasOptimiseResponse: true` — always `_id`, with optional `Partial<data>` projection
+- `OptimisedRowData<T>`: Top-level row when `hasOptimiseResponse: true` — same as `DatabaseRowData` but without `notice`
+- `DatabaseAsyncRowData<T>`: Minimal row returned by ASYNC save mode — only `_id` and `data`
 - `DatabaseQuery`: MongoDB-style query interface with `$and`, `$or` support
 - `DatabaseListOptions`: Comprehensive options for row retrieval (pagination, sorting, filtering)
-- `DatabaseSaveMode`: Enum for save operations (SYNC | ASYNC)
+- `DatabaseSaveMode`: Enum for save operations (`SYNC`/`ASYNC` members with lowercase wire values `sync`/`async`)
 - `Relation<T>`: Marker type for has-one relation fields (backend `Direction.HasOne`). Resolves to `DatabaseRelatedRowData<T>` or `null` at D=1, `string` at D=0
 - `RelationMany<T>`: Marker type for has-many relation fields (backend `Direction.HasMany`). Resolves to `DatabaseRelatedRowData<T>[]` at D=1, `string[]` at D=0
 - `ResolveRelations<T, D>`: Transforms relation markers based on depth — D=1 (default) matches API read responses, D=0 matches write payloads
+- `ResolveRelationsOptimised<T, D>`: Like `ResolveRelations` but maps relations to `OptimisedRelatedRowData` for optimised responses
 - `DatabaseEntity<T, D>`: Convenience type — `DatabaseRowData<ResolveRelations<T, D>>`. Single-step alias for a full row with resolved relations
+- `OptimisedDatabaseEntity<T, D>`: Convenience type — `OptimisedRowData<ResolveRelationsOptimised<T, D>>` for optimised responses
 - `DatabaseWriteData<T>`: Write-path data shape — `ResolveRelations<T, 0>`. All relations become plain ObjectId strings
+- `OptimisedRowsResponse<T>`: Response shape for `getRows` with `hasOptimiseResponse: true`
+- `DatabaseAsyncRowResponse<T>`: Response shape for `updateRow` with `saveMode: ASYNC`
 - `ChatChannelType`: Enum for chat types (Public, StaffToUser, PeerToPeer, Staff)
 - `ChatChannel`: Channel data structure (id, type, accesses, settings, unread counts, resolved)
 - `ChatMessage`: Message structure (channel, message, user, attaches, timestamps)
