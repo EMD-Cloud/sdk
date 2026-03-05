@@ -1,4 +1,4 @@
-import AppOptions from 'src/core/AppOptions'
+import { BaseModule } from 'src/core/BaseModule'
 import { ValidationError } from 'src/errors/ValidationError'
 import { Upload } from 'tus-js-client'
 import { v4 as uuidv4 } from 'uuid'
@@ -10,14 +10,11 @@ import type {
   UploadStatus,
   UploadProgress,
 } from 'src/types/uploader'
-import { ReadPermission } from 'src/types/uploader'
+import { ReadPermission, ContentDisposition, AccessPolicyType } from 'src/types/uploader'
+import type { CallOptions } from 'src/types/common'
+import type { ResponseSingleUnit } from 'src/types/fetch'
 
-class Uploader {
-  private applicationOptions: AppOptions
-
-  constructor(applicationOptions: AppOptions) {
-    this.applicationOptions = applicationOptions
-  }
+class Uploader extends BaseModule {
 
   /**
    * Uploads a file to EMD Cloud storage using chunked upload (TUS protocol).
@@ -31,8 +28,9 @@ class Uploader {
    * @param {string} [options.integration='default'] - S3 integration identifier.
    * @param {number} [options.chunkSize] - Size of each upload chunk in bytes.
    * @param {number[]} [options.retryDelays=[0, 3000, 5000, 10000, 20000]] - Retry delay intervals in milliseconds.
+   * @param {AccessPolicy} [options.accessPolicy] - v2 access policy (mutually exclusive with readPermission).
    * @param {ReadPermission} [options.readPermission=ReadPermission.OnlyAppStaff] - Access permission level for the file.
-   * @param {string[]} [options.permittedUsers] - Array of user IDs (required when readPermission is OnlyPermittedUsers).
+   * @param {string[]} [options.permittedUsers] - Array of user IDs (required when permission requires permitted users).
    * @param {number} [options.presignedUrlTTL=60] - Time-to-live for presigned URLs in minutes.
    * @param {Record<string, string|number|boolean>} [options.headers] - Additional HTTP headers.
    * @param {UploadCallbacks} [callbacks] - Event callbacks for upload lifecycle.
@@ -43,9 +41,9 @@ class Uploader {
    * @throws {ValidationError} If required parameters are invalid or missing.
    *
    * @example
-   * // Basic file upload
+   * // Upload with v2 access policy (public)
    * const { file } = emdCloud.uploader.uploadFile(myFile, {
-   *   readPermission: ReadPermission.OnlyAuthUser
+   *   accessPolicy: { type: AccessPolicyType.OnlyAuthUser }
    * }, {
    *   onProgress: (progress) => {
    *     console.log(`Upload progress: ${progress.percentage}%`);
@@ -59,14 +57,20 @@ class Uploader {
    * });
    *
    * @example
-   * // Upload with specific user permissions
+   * // Upload with private access policy granting staff and permitted users
    * const { file } = emdCloud.uploader.uploadFile(document, {
-   *   readPermission: ReadPermission.OnlyPermittedUsers,
+   *   accessPolicy: { type: AccessPolicyType.Private, allowStaff: true, allowPermittedUsers: true },
    *   permittedUsers: ['user-id-1', 'user-id-2']
    * });
    *
    * // Cancel the upload later
    * file.abort();
+   *
+   * @example
+   * // Upload with v1 readPermission (deprecated, use accessPolicy instead)
+   * const { file } = emdCloud.uploader.uploadFile(myFile, {
+   *   readPermission: ReadPermission.OnlyAuthUser
+   * });
    */
   uploadFile(
     file: File,
@@ -84,16 +88,45 @@ class Uploader {
       chunkSize = 5 * 1024 * 1024, // Default 5MB chunks
       retryDelays = [0, 3000, 5000, 10000, 20000],
       readPermission = ReadPermission.OnlyAppStaff,
+      accessPolicy,
       permittedUsers,
       presignedUrlTTL = 60,
       headers = {},
       onBeforeRequest,
     } = options
 
-    // Validate readPermission and permittedUsers
-    if (readPermission === 'onlyPermittedUsers' && !permittedUsers?.length) {
+    if (accessPolicy && options.readPermission) {
       throw new ValidationError(
-        'permittedUsers array is required when readPermission is OnlyPermittedUsers',
+        'accessPolicy and readPermission are mutually exclusive',
+      )
+    }
+
+    // Validate that grant flags are only used with Private type
+    if (
+      accessPolicy &&
+      accessPolicy.type !== AccessPolicyType.Private &&
+      ('allowStaff' in accessPolicy ||
+        'allowPersonal' in accessPolicy ||
+        'allowPermittedUsers' in accessPolicy)
+    ) {
+      throw new ValidationError(
+        'allowStaff, allowPersonal, and allowPermittedUsers are only allowed with AccessPolicyType.Private',
+      )
+    }
+
+    // Validate permittedUsers requirement
+    const needsPermittedUsers =
+      (!accessPolicy &&
+        (readPermission === ReadPermission.OnlyPermittedUsers ||
+          readPermission ===
+            ReadPermission.OnlyAppStaffAndPermittedUsers)) ||
+      (accessPolicy?.type === AccessPolicyType.Private &&
+        'allowPermittedUsers' in accessPolicy &&
+        accessPolicy.allowPermittedUsers === true)
+
+    if (needsPermittedUsers && !permittedUsers?.length) {
+      throw new ValidationError(
+        'permittedUsers array is required when permission requires permitted users',
       )
     }
 
@@ -108,8 +141,13 @@ class Uploader {
     const metadata: Record<string, string> = {
       filename: file.name,
       filetype: file.type || 'application/octet-stream',
-      read_permission: readPermission,
       presigned_url_ttl: presignedUrlTTL.toString(),
+    }
+
+    if (accessPolicy) {
+      metadata.access_policy = JSON.stringify(accessPolicy)
+    } else {
+      metadata.read_permission = readPermission
     }
 
     if (permittedUsers?.length) {
@@ -228,6 +266,73 @@ class Uploader {
   getMetaUrl(integration: string, fileId: string): string {
     const { apiUrl, app } = this.applicationOptions.getOptions()
     return `${apiUrl}/api/${app}/uploader/chunk/${integration}/meta/${fileId}`
+  }
+
+  /**
+   * Creates a short-lived file access token for accessing protected files.
+   *
+   * @param {number} [ttlMinutes] - Token time-to-live in minutes.
+   * @param {CallOptions} [callOptions] - Optional authentication override.
+   * @returns {Promise<string | number>} The file access token.
+   */
+  async createFileAccessToken(
+    ttlMinutes?: number,
+    callOptions?: CallOptions,
+  ): Promise<string | number> {
+    const { apiUrl, app } = this.applicationOptions.getOptions()
+    const authorizationHeader = this.applicationOptions.getAuthorizationHeader(
+      callOptions?.authType,
+    )
+
+    const body: Record<string, unknown> = {}
+    if (ttlMinutes !== undefined) {
+      body.ttlMinutes = ttlMinutes
+    }
+
+    return this.request<ResponseSingleUnit>(
+      `${apiUrl}/api/${app}/uploader/token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authorizationHeader,
+        },
+        body: JSON.stringify(body),
+      },
+      callOptions,
+    )
+  }
+
+  /**
+   * Checks whether a URL points to an EMD Cloud uploaded file.
+   *
+   * @param {string} url - The URL to check.
+   * @returns {boolean} True if the URL is an EMD Cloud file link.
+   */
+  isEMDLink(url: string): boolean {
+    const { apiUrl, app } = this.applicationOptions.getOptions()
+    return url.startsWith(`${apiUrl}/api/${app}/uploader/chunk/`)
+  }
+
+  /**
+   * Formats an EMD Cloud file URL with optional access token and content disposition.
+   *
+   * @param {string} url - The file URL to format.
+   * @param {ContentDisposition} [contentDisposition=ContentDisposition.Inline] - How the browser should handle the file.
+   * @param {string} [token] - File access token for protected files.
+   * @returns {string} The formatted URL with query parameters.
+   */
+  formatFileLink(
+    url: string,
+    contentDisposition: ContentDisposition = ContentDisposition.Inline,
+    token?: string,
+  ): string {
+    const urlObj = new URL(url)
+    if (token) {
+      urlObj.searchParams.set('token', token)
+    }
+    urlObj.searchParams.set('contentDisposition', contentDisposition)
+    return urlObj.toString()
   }
 }
 

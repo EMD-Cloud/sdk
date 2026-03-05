@@ -1,6 +1,7 @@
 /**
  * Read permission levels for uploaded files
  * Determines who can access the uploaded file
+ * @deprecated Use {@link AccessPolicy} instead for granular v2 access control
  */
 export enum ReadPermission {
   /** File is publicly accessible without authentication */
@@ -11,7 +12,47 @@ export enum ReadPermission {
   OnlyAppStaff = 'onlyAppStaff',
   /** File is accessible only to specifically permitted users */
   OnlyPermittedUsers = 'onlyPermittedUsers',
+  /** File is accessible only to app staff and specifically permitted users */
+  OnlyAppStaffAndPermittedUsers = 'onlyAppStaffAndPermittedUsers',
 }
+
+/**
+ * Base access type for v2 access policy
+ */
+export enum AccessPolicyType {
+  /** File is publicly accessible */
+  Public = 'public',
+  /** File is accessible only to authenticated users */
+  OnlyAuthUser = 'onlyAuthUser',
+  /** File is private (accessible only via explicit grants) */
+  Private = 'private',
+}
+
+/**
+ * Content disposition for file downloads
+ */
+export enum ContentDisposition {
+  /** Display the file inline in the browser */
+  Inline = 'inline',
+  /** Prompt the user to download the file */
+  Attachment = 'attachment',
+}
+
+/**
+ * v2 access policy for uploaded files (mutually exclusive with ReadPermission).
+ *
+ * - `Public` / `OnlyAuthUser`: no additional grant flags allowed.
+ * - `Private`: optionally grant access to staff, the file owner, or permitted users.
+ */
+export type AccessPolicy =
+  | { type: AccessPolicyType.Public }
+  | { type: AccessPolicyType.OnlyAuthUser }
+  | {
+      type: AccessPolicyType.Private
+      allowStaff?: boolean
+      allowPersonal?: boolean
+      allowPermittedUsers?: boolean
+    }
 
 /**
  * Upload status tracking
@@ -37,9 +78,12 @@ export interface UploadOptions {
   chunkSize?: number
   /** Array of retry delay intervals in milliseconds */
   retryDelays?: number[]
-  /** Read permission level for the uploaded file */
+  /**
+   * Read permission level for the uploaded file
+   * @deprecated Use {@link UploadOptions.accessPolicy} instead for granular v2 access control
+   */
   readPermission?: ReadPermission
-  /** Array of user IDs who can access the file (required when readPermission is OnlyPermittedUsers) */
+  /** Array of user IDs who can access the file (required when permission requires permitted users) */
   permittedUsers?: string[]
   /** Time-to-live for presigned URLs in minutes (default: 60) */
   presignedUrlTTL?: number
@@ -47,6 +91,8 @@ export interface UploadOptions {
   headers?: Record<string, string | number | boolean>
   /** Callback invoked before each HTTP request during upload */
   onBeforeRequest?: (req: any) => void
+  /** v2 access policy (mutually exclusive with readPermission) */
+  accessPolicy?: AccessPolicy
 }
 
 /**
@@ -69,8 +115,13 @@ export interface UploadMetadata {
   filename: string
   /** MIME type of the file */
   filetype: string
-  /** Read permission level */
-  read_permission: string
+  /**
+   * Read permission level (v1)
+   * @deprecated Prefer {@link UploadMetadata.access_policy} for v2 access control
+   */
+  read_permission?: string
+  /** v2 access policy as JSON string */
+  access_policy?: string
   /** Semicolon-separated list of permitted user IDs */
   permitted_users?: string
   /** Presigned URL TTL in minutes */
