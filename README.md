@@ -29,6 +29,9 @@
 		-   [Method: uploader.uploadFile](#method--uploaderuploadfile)
 		-   [Method: uploader.getFileUrl](#method--uploadergetfileurl)
 		-   [Method: uploader.getMetaUrl](#method--uploadergetmetaurl)
+		-   [Method: uploader.createFileAccessToken](#method--uploadercreatefileaccesstoken)
+		-   [Method: uploader.isEMDLink](#method--uploaderisEMDlink)
+		-   [Method: uploader.formatFileLink](#method--uploaderformatfilelink)
 	-   [Webhook methods](#webhook-methods)
 		-   [Method: webhook.call](#method--webhookcall)
 	-   [Database methods](#database-methods)
@@ -660,8 +663,9 @@ Uploads a file to EMD Cloud storage using chunked upload with the TUS protocol. 
     -   `integration` (string, optional): S3 integration identifier (default: 'default').
     -   `chunkSize` (number, optional): Size of each upload chunk in bytes.
     -   `retryDelays` (array, optional): Retry delay intervals in milliseconds (default: [0, 3000, 5000, 10000, 20000]).
-    -   `readPermission` (ReadPermission, optional): Access permission level for the file (default: ReadPermission.OnlyAppStaff).
-    -   `permittedUsers` (array, optional): Array of user IDs who can access the file (required when readPermission is OnlyPermittedUsers).
+    -   `accessPolicy` (AccessPolicy, optional): v2 access policy — mutually exclusive with `readPermission`. See [Access Policy](#access-policy) below.
+    -   `readPermission` (ReadPermission, optional): **(Deprecated)** v1 access permission level (default: ReadPermission.OnlyAppStaff). Use `accessPolicy` instead.
+    -   `permittedUsers` (array, optional): Array of user IDs who can access the file (required when permission requires permitted users).
     -   `presignedUrlTTL` (number, optional): Time-to-live for presigned URLs in minutes (default: 60).
     -   `headers` (object, optional): Additional HTTP headers to include in upload requests.
 -   `callbacks` (object, optional): Event callbacks for upload lifecycle:
@@ -682,19 +686,33 @@ Returns an object containing:
     -   `error` (Error, optional): Error that occurred during upload (if failed).
     -   `abort` (function): Function to abort the upload.
 
+**Access Policy:**
+
+The v2 `AccessPolicy` replaces the flat `ReadPermission` enum with a structured object. The `type` field determines the base visibility, and grant flags (`allowStaff`, `allowPersonal`, `allowPermittedUsers`) are only allowed with `AccessPolicyType.Private`.
+
+| `AccessPolicyType` | Description | Grant flags allowed |
+|---------------------|-------------|---------------------|
+| `Public` | Accessible without authentication | No |
+| `OnlyAuthUser` | Accessible to any authenticated user | No |
+| `Private` | Accessible only via explicit grants | Yes |
+
+Grant flags (only with `Private`):
+-   `allowStaff` (boolean, optional): Grant access to app staff members.
+-   `allowPersonal` (boolean, optional): Grant access to the file owner.
+-   `allowPermittedUsers` (boolean, optional): Grant access to users listed in `permittedUsers`.
+
 **Notes:**
 - User must be authenticated before uploading files.
-- The `ReadPermission` enum must be imported: `import { ReadPermission } from '@emd-cloud/sdk'`.
-- If `readPermission` is set to `OnlyPermittedUsers`, the `permittedUsers` array is required.
+- `accessPolicy` and `readPermission` are mutually exclusive — providing both throws a `ValidationError`.
+- When `allowPermittedUsers` is `true` (or `readPermission` is `OnlyPermittedUsers` / `OnlyAppStaffAndPermittedUsers`), the `permittedUsers` array is required.
 
-**Example:**
+**Example with v2 access policy:**
 ```javascript
-import { ReadPermission } from '@emd-cloud/sdk'
+import { AccessPolicyType } from '@emd-cloud/sdk'
 
-// Basic file upload with progress tracking
+// Upload with authenticated-user access
 const { file } = emdCloud.uploader.uploadFile(myFile, {
-  readPermission: ReadPermission.OnlyAuthUser,
-  presignedUrlTTL: 120
+  accessPolicy: { type: AccessPolicyType.OnlyAuthUser }
 }, {
   onProgress: (progress) => {
     console.log(`Upload progress: ${progress.percentage}%`);
@@ -716,33 +734,43 @@ console.log('Current status:', file.status);
 // file.abort();
 ```
 
-**Example with specific user permissions:**
+**Example with private access granting staff and specific users:**
 ```javascript
-import { ReadPermission } from '@emd-cloud/sdk'
+import { AccessPolicyType } from '@emd-cloud/sdk'
 
-// Upload document accessible only to specific users
+// Upload document accessible to staff and specific users
 const { file } = emdCloud.uploader.uploadFile(document, {
-  readPermission: ReadPermission.OnlyPermittedUsers,
+  accessPolicy: { type: AccessPolicyType.Private, allowStaff: true, allowPermittedUsers: true },
   permittedUsers: ['user-id-1', 'user-id-2', 'user-id-3']
 }, {
   onSuccess: (fileId, fileUrl) => {
-    console.log('Document uploaded and accessible to permitted users');
+    console.log('Document uploaded and accessible to staff and permitted users');
   }
 });
 ```
 
 **Example with public access:**
 ```javascript
-import { ReadPermission } from '@emd-cloud/sdk'
+import { AccessPolicyType } from '@emd-cloud/sdk'
 
 // Upload publicly accessible file
 const { file } = emdCloud.uploader.uploadFile(imageFile, {
-  readPermission: ReadPermission.Public,
+  accessPolicy: { type: AccessPolicyType.Public },
   presignedUrlTTL: 1440 // 24 hours
 }, {
   onSuccess: (fileId, fileUrl) => {
     console.log('Public file URL:', fileUrl);
   }
+});
+```
+
+**Example with legacy v1 readPermission (deprecated):**
+```javascript
+import { ReadPermission } from '@emd-cloud/sdk'
+
+// Still works but prefer accessPolicy for new code
+const { file } = emdCloud.uploader.uploadFile(imageFile, {
+  readPermission: ReadPermission.OnlyAuthUser
 });
 ```
 
@@ -790,6 +818,97 @@ Returns a string containing the complete URL to access file metadata.
 const metaUrl = emdCloud.uploader.getMetaUrl('default', 'abc123def456');
 console.log(metaUrl);
 // Output: https://api.emd.one/api/myapp/uploader/chunk/default/meta/abc123def456
+```
+
+<br>
+
+#### Method:  `uploader.createFileAccessToken`
+
+**Description:**
+Creates a short-lived file access token for accessing protected files without requiring full authentication. Useful for generating temporary access links.
+
+**Parameters:**
+
+-   `ttlMinutes` (number, optional): Token time-to-live in minutes.
+-   `callOptions` (CallOptions, optional): Optional authentication override.
+
+**Returns:**
+
+Returns a `Promise<string | number>` resolving to the file access token.
+
+**Example:**
+```javascript
+// Create a token with default TTL
+const token = await emdCloud.uploader.createFileAccessToken();
+
+// Create a token valid for 30 minutes
+const token = await emdCloud.uploader.createFileAccessToken(30);
+```
+
+<br>
+
+#### Method:  `uploader.isEMDLink`
+
+**Description:**
+Checks whether a URL points to an EMD Cloud uploaded file. Useful for determining if a URL needs token-based access or content disposition formatting.
+
+**Parameters:**
+
+-   `url` (string): The URL to check.
+
+**Returns:**
+
+Returns `true` if the URL is an EMD Cloud file link for the current app, `false` otherwise.
+
+**Example:**
+```javascript
+emdCloud.uploader.isEMDLink('https://api.emd.one/api/myapp/uploader/chunk/default/file/abc123');
+// true
+
+emdCloud.uploader.isEMDLink('https://example.com/image.png');
+// false
+```
+
+<br>
+
+#### Method:  `uploader.formatFileLink`
+
+**Description:**
+Formats an EMD Cloud file URL with an optional access token and content disposition. Use together with `createFileAccessToken` and `isEMDLink` to build secure, ready-to-use file links.
+
+**Parameters:**
+
+-   `url` (string): The file URL to format.
+-   `contentDisposition` (ContentDisposition, optional): How the browser should handle the file (default: `ContentDisposition.Inline`).
+-   `token` (string, optional): File access token for protected files.
+
+**Returns:**
+
+Returns the formatted URL string with query parameters appended.
+
+**Example:**
+```javascript
+import { ContentDisposition } from '@emd-cloud/sdk'
+
+const token = await emdCloud.uploader.createFileAccessToken(30);
+
+// Format as inline (e.g. display image in browser)
+const viewUrl = emdCloud.uploader.formatFileLink(fileUrl, ContentDisposition.Inline, token);
+
+// Format as attachment (e.g. force download)
+const downloadUrl = emdCloud.uploader.formatFileLink(fileUrl, ContentDisposition.Attachment, token);
+```
+
+**Full usage pattern (checking + formatting):**
+```javascript
+import { ContentDisposition } from '@emd-cloud/sdk'
+
+function getDisplayUrl(url: string, token?: string): string {
+  if (!url) return '';
+  if (!emdCloud.uploader.isEMDLink(url)) return url;
+
+  return emdCloud.uploader.formatFileLink(url, ContentDisposition.Inline, token);
+}
 ```
 
 <br>

@@ -38,14 +38,17 @@ The EMD Cloud SDK is a TypeScript library for interacting with the EMD Cloud API
 - **Module separation**:
   - **Auth module** (`auth`) handles authentication flows: login, registration, OAuth (VK/Yandex), password reset
   - **UserInteraction module** (`user`) handles user management: social account connections (Steam/VK/Twitch), activity tracking (ping), user listing/details
-  - **Uploader module** (`uploader`) handles file uploads: TUS protocol-based resumable uploads with progress tracking, permission controls, and automatic retries
+  - **Uploader module** (`uploader`) handles file uploads: TUS protocol-based resumable uploads with progress tracking, v2 access policies (or legacy v1 ReadPermission), file access tokens, link formatting, and automatic retries
 - **OAuth flow**: Social login via VK/Yandex - initiate with `auth.socialLogin()`, handle callback, exchange secret with `auth.exchangeOAuthToken()`
 - **Social account attachment**: Connect existing users to social platforms (Steam/VK/Twitch) via `user.attachSocialAccount()` and `user.detachSocialAccount()`
 - **User presence tracking**: Track user activity and online status with `user.ping()` method
 - **File uploads with TUS protocol**: Uploader module uses TUS (resumable upload protocol) for chunked file uploads with:
   - **Resumable uploads**: Uploads can be paused and resumed, surviving connection interruptions
   - **Progress tracking**: Real-time progress callbacks with bytes uploaded/total and percentage
-  - **Permission-based access**: Control file access with ReadPermission enum (Public, OnlyAuthUser, OnlyAppStaff, OnlyPermittedUsers)
+  - **v2 Access Policy**: Granular permission via `AccessPolicy` discriminated union — `AccessPolicyType.Public`, `OnlyAuthUser`, or `Private` with optional `allowStaff`/`allowPersonal`/`allowPermittedUsers` grant flags (only valid with `Private`). Mutually exclusive with legacy `ReadPermission`.
+  - **Legacy ReadPermission** *(deprecated)*: Flat enum (Public, OnlyAuthUser, OnlyAppStaff, OnlyPermittedUsers, OnlyAppStaffAndPermittedUsers) — still supported for backward compatibility
+  - **File access tokens**: `createFileAccessToken(ttlMinutes?)` creates short-lived tokens for accessing protected files without full auth
+  - **Link utilities**: `isEMDLink(url)` checks if a URL is an EMD Cloud file; `formatFileLink(url, contentDisposition?, token?)` appends token and content disposition query params
   - **Automatic authentication**: Auth headers injected automatically from SDK configuration
   - **Retry mechanism**: Configurable retry delays for failed chunk uploads
   - **Abort capability**: Cancel in-progress uploads programmatically
@@ -90,9 +93,12 @@ All types are in `src/types/` with strict TypeScript mode enabled. Key interface
 - `UserListResponse`: Response with user list data and total count
 - `AccountStatus`: Enum for user account statuses (Pending, Approved, Rejected)
 - `PingStatus`: Enum for user online status (Online, Offline)
-- `ReadPermission`: Enum for file access levels (Public, OnlyAuthUser, OnlyAppStaff, OnlyPermittedUsers)
+- `ReadPermission`: *(deprecated)* Enum for v1 file access levels (Public, OnlyAuthUser, OnlyAppStaff, OnlyPermittedUsers, OnlyAppStaffAndPermittedUsers)
+- `AccessPolicyType`: Enum for v2 access policy base types (Public, OnlyAuthUser, Private)
+- `AccessPolicy`: Discriminated union type — `{ type: Public }`, `{ type: OnlyAuthUser }`, or `{ type: Private, allowStaff?, allowPersonal?, allowPermittedUsers? }`. Grant flags only valid with `Private`.
+- `ContentDisposition`: Enum for file download behavior (Inline, Attachment)
 - `UploadStatus`: Enum for upload state tracking (Pending, Uploading, Success, Failed)
-- `UploadOptions`: Configuration interface for file uploads (integration, chunkSize, retryDelays, readPermission, permittedUsers, presignedUrlTTL, headers)
+- `UploadOptions`: Configuration interface for file uploads (integration, chunkSize, retryDelays, accessPolicy, readPermission *(deprecated)*, permittedUsers, presignedUrlTTL, headers)
 - `UploadProgress`: Progress tracking interface (bytesUploaded, bytesTotal, percentage)
 - `UploadFile`: File state and control interface (id, fileName, status, progress, fileUrl, error, abort)
 - `UploadCallbacks`: Event handlers interface (onProgress, onSuccess, onError)
